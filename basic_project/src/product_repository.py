@@ -1,0 +1,32 @@
+from models import Product
+from pony.orm import db_session
+from typing import List
+
+# Abstraciones para acceder a la base de datos y crear productos.
+# Aca iria todas las queries de la base de datos y los metodos para crear productos.
+class ProductRepository:
+
+    @db_session # Decorador que indica que la función se ejecuta dentro de una transacción
+    def create_product(self, name, price):
+        Product(name=name, price=price)
+
+    @db_session
+    def get_product(self, product_id: int) -> dict:
+        product = Product.get(id=product_id)
+        if product is None:
+            raise ValueError("Product does not exist")
+        return {'id': product.id, 'name': product.name, 'price': product.price}
+        # Observar que cuando devolvemos un producto, usamos un diccionario JSON y no el objeto de la base de datos.
+
+    @db_session
+    def get_products(self) -> List[dict]:
+        products = [
+            {'id': product.id, 'name': product.name, 'price': product.price}
+            for product in Product.select()
+        ]
+        return products
+
+    @db_session
+    def update_all_prices(self, factor):
+        for p in Product.select():
+            p.price = p.price * factor
