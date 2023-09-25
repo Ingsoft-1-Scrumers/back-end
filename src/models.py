@@ -12,7 +12,13 @@ class User(db.Entity):
     hand_cards = Optional(str)
     position_in_game = Optional(int)
     lobby_name = Optional(str)
+    position = Optional('Position')
 
+
+class Position(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    user = Required(User)
+    obstacle = Optional(str)
 
 db.bind(provider='sqlite', filename='user_db.sqlite', create_db=True)
 db.generate_mapping(create_tables=True)
