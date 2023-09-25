@@ -13,7 +13,8 @@ class User(db.Entity):
     lobby_name = Optional(str)
     position = Optional('Position')
 
-
+# Para determinar las posiciones tomamos un set de jugadores y le asociamos una 
+# Entonces creo una posicion por jugador??
 class Position(db.Entity):
     id = PrimaryKey(int, auto=True)
     user = Required(User)
