@@ -10,7 +10,6 @@ class User(db.Entity):
     role_in_game = Optional(str)
     game_name = Optional(str)
     hand_cards = Optional(str)
-    position_in_game = Optional(int)
     lobby_name = Optional(str)
     position = Optional('Position')
 
