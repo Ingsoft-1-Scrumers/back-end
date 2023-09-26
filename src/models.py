@@ -1,18 +1,34 @@
-from pony.orm import *
+from pony.orm import (Database, Required, Set, Optional)
 
 db = Database()
 
-class User(db.Entity):
-    id = PrimaryKey(int, auto=True)
+class Game(db.Entity):
     name = Required(str)
-    is_alive = Optional(bool)
-    in_quarantine = Optional(bool)
-    role_in_game = Optional(str)
-    game_name = Optional(str)
-    hand_cards = Optional(str)
-    position_in_game = Optional(int)
-    lobby_name = Optional(str)
-
+    amount_players = Required(int)
+    all_cards = Set('Card', reverse = 'game_associated')
+    deck = Set('Card', reverse = 'game_deck')  # One-to-many relationship: one game can have many cards in the deck
+    
+class Card(db.Entity):
+    card_name = Required(str)
+    card_type = Required(str)
+    description = Required(str)
+    game_associated = Required(Game, reverse='all_cards')
+    game_deck = Optional(Game, reverse='deck')
+    #user = Optional(User)
 
 db.bind(provider='sqlite', filename='user_db.sqlite', create_db=True)
 db.generate_mapping(create_tables=True)
+
+"""
+from game_repository import GameRepository
+repo = GameRepository()
+repo.create_game("lucia game", 4)
+from models import Game
+Game.select().show()
+from models import Card
+Card.select().show()
+from util import deckrepository
+drepo = deckrepository(repo, Game[1])
+
+drepo.create_deck()
+"""
