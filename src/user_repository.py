@@ -10,6 +10,11 @@ class UserRepository:
     @db_session
     def user_exists(self, user_name: str) -> bool:
         return User.exists(name=user_name)
+    
+    @db_session
+    def is_user_in_any_lobby(self, user_name: str) -> bool:
+        user = User.get(name=user_name)
+        return user.lobby is not None
         
     @db_session
     def get_user(self, user_name: str) -> dict:
