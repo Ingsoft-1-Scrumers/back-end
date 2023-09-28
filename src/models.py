@@ -3,22 +3,44 @@ from pony.orm import *
 db = Database()
 
 class User(db.Entity):
-    id = PrimaryKey(int, auto=True)
-    name = Required(str)
+    name = PrimaryKey(str)
     is_alive = Optional(bool)
-    in_quarantine = Optional(bool)
-    role_in_game = Optional(str)
-    game_name = Optional(str)
-    hand_cards = Optional(str)
-    lobby_name = Optional(str)
+    lobby = Optional('Lobby', reverse='users')
+    hosting_lobby = Optional('Lobby', reverse='host')
     position = Optional('Position')
+    hand = Set('Card')
 
-# Para determinar las posiciones tomamos un set de jugadores y le asociamos una 
-# Entonces creo una posicion por jugador??
+class Lobby(db.Entity):
+    name = PrimaryKey(str)
+    password = Optional(str)
+    min_players = Required(int, size=8)
+    max_players = Required(int, size=8)
+    users = Set(User, reverse='lobby')
+    host = Required(User, reverse='hosting_lobby')
+    game = Optional('Game')
+
 class Position(db.Entity):
     id = PrimaryKey(int, auto=True)
     user = Required(User)
-    obstacle = Optional(str)
+    game = Required('Game', reverse='positions')
+    turn = Optional('Game', reverse='turn')
+
+class Game(db.Entity):
+    lobby = PrimaryKey(Lobby)
+    amount_players = Required(int, size=8, unsigned=True)
+    turn = Required(Position, reverse='turn')
+    positions = Set(Position, reverse='game')
+    all_cards = Set('Card', reverse='game_associated')
+    deck_cards = Set('Card', reverse='game_deck')
+
+class Card(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    name = Required(str)
+    type = Required(str)
+    description = Required(str)
+    game_associated = Required(Game, reverse='all_cards')
+    game_deck = Optional(Game, reverse='deck_cards')
+    user_hand = Optional(User)
 
 db.bind(provider='sqlite', filename='user_db.sqlite', create_db=True)
 db.generate_mapping(create_tables=True)
