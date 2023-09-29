@@ -1,5 +1,5 @@
 from game_repository import GameRepository
-from models import Game, Card
+from models import Game, Card, User
 from template import *
 from pony.orm import db_session
 
