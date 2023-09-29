@@ -1,4 +1,4 @@
-from game_repository import GameRepository
+from card_repository import CardRepository
 from models import Game, Card, User
 from template import *
 from pony.orm import db_session
@@ -6,7 +6,7 @@ from pony.orm import db_session
 class deckrepository:
     
     def __init__(
-        self, game_repo: GameRepository,
+        self, game_repo: CardRepository,
         this_game: Game,
     ):
         self.game_repo = game_repo

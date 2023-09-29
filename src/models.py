@@ -30,8 +30,8 @@ db.bind(provider='sqlite', filename='user_db.sqlite', create_db=True)
 db.generate_mapping(create_tables=True)
 
 """
-from game_repository import GameRepository
-repo = GameRepository()
+from card_repository import CardRepository
+repo = CardRepository()
 repo.create_game("lucia game", 4)
 from models import Game
 Game.select().show()
@@ -52,4 +52,6 @@ User[2].game_in = Game[1]
 
 repo.deal_cards_all_users(Game[1])
 Card.select().show()
+repo.steal_card_from_deck(User[1])
+
 """
