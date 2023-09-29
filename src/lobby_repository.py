@@ -1,18 +1,16 @@
 from models import Lobby, User
 from pony.orm import db_session
 
-# TODO: Revisar si tenemos que usar UserRepository para obtener el usuario
-
 class LobbyRepository:
 
     @db_session
     def create_lobby(self, lobby_name: str, min_players: int, max_players: int, password: str, host_name: str):
-        host = User.get(name=host_name)
+        host = User.get(name=host_name) # Usar user_repo
         if (password == 'empty'):
             password = None
         lobby = Lobby(name=lobby_name, min_players=min_players, max_players=max_players, password=password, host=host)
         lobby.users.add(host)
-        host.hosting_lobby = lobby
+        host.hosting_lobby = lobby # Usar user_repo
 
     @db_session 
     def lobby_exists(self, lobby_name: str) -> bool:
@@ -34,10 +32,10 @@ class LobbyRepository:
 
     @db_session
     def add_user_to_lobby(self, lobby_name: str, user_name : str):
-        user = User.get(name=user_name)
+        user = User.get(name=user_name) # Usar user_repo
         lobby = Lobby.get(name=lobby_name)
         lobby.users.add(user)
-        user.lobby = lobby
+        user.lobby = lobby # Usar user_repo
 
     @db_session
     def is_user_in_lobby(self, lobby_name: str, user_name: str) -> bool:
