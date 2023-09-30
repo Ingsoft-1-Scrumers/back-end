@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from repository import LobbyRepository, UserRepository
+from repository import LobbyRepository, UserRepository, GameRepository
 
 app = FastAPI()
 
@@ -84,4 +84,14 @@ async def get_lobby_users(lobby_name: str, user_name: str):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the lobby users')
-    
+
+@app.post('/start_game/')
+async def start_game(game_name: str):
+    repo_lobby = LobbyRepository()
+    amount_players = repo_lobby.amount_players(game_name) #TODO Necesito esta funcion en lobby_repository 
+    repo_game = GameRepository()
+    try:
+        repo_game.create_Game(game_name, amount_players)
+        return {'message': 'Game started successfully'}
+    except Exception as e:
+        return {'message': 'An error occurred while starting the game for cause: {}'.format(e)}
