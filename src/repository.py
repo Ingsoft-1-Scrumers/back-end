@@ -101,8 +101,8 @@ class LobbyRepository:
     def add_user_to_lobby(self, lobby_name: str, user_name : str):
         user_repo = UserRepository()
         user = user_repo.get_user(user_name)
-        lobby = Lobby.get(name=lobby_name)
-        lobby.users.add(user) # No es necesario modificar el atributo lobby del usuario, se hace automáticamente
+        actual_lobby = Lobby.get(name=lobby_name)
+        user.lobby = actual_lobby
 
     @db_session
     def get_amount_users(self, lobby_name: str) -> int:
@@ -115,6 +115,11 @@ class LobbyRepository:
         users_dict = [{'name': user.name} for user in lobby.users]
         users_dict.append({'host': lobby.host.name})
         return users_dict
+    
+    @db_session
+    def get_lobby_set_users(self, lobby_name: str):
+        lobby = Lobby.get(name=lobby_name)
+        return lobby.users
 
 
 class GameRepository:
@@ -180,7 +185,7 @@ class CardRepository:
     def deal_cards_all_users(self, lobby_name: str):
         lobby_repo = LobbyRepository()
         game = lobby_repo.get_game(lobby_name)
-        users = lobby_repo.get_lobby_users(lobby_name)
+        users = lobby_repo.get_lobby_set_users(lobby_name)
         for user in users:
             self.deal_4_cards_user(user, game)   
 
