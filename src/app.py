@@ -1,3 +1,4 @@
+from fastapi import FastAPI, HTTPException
 from repository import LobbyRepository, UserRepository, GameRepository, CardRepository
 
 app = FastAPI()

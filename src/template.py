@@ -261,7 +261,7 @@ Revelaciones = {
 }
 
 # ------------------------------------------------------------------------------
-all_templates = [La_cosa, Infectado, Lanzallamas, Analisis, Hacha, Sospecha, 
+ALL_TEMPLATES = [La_cosa, Infectado, Lanzallamas, Analisis, Hacha, Sospecha, 
                  Determinacion, Vigila_tus_espaldas, Cambio_de_lugar, 
                  Mas_vale_que_corras, Seduccion, Aterrador, Aqui_estoy_bien, 
                  No_gracias, Fallaste, Nada_de_barbacoas, Cuarentena, 
