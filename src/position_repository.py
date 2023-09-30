@@ -13,3 +13,4 @@ class PositionRepository:
         if position is None:
             raise ValueError("Position does not exist")
         return {'username': user.name, 'position': position.id}
+    
