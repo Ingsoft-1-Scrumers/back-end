@@ -3,7 +3,6 @@ from settings import DATABASE_FILENAME
 
 db = Database()
 
-
 class User(db.Entity):
     name = PrimaryKey(str)
     is_alive = Optional(bool)
@@ -11,7 +10,6 @@ class User(db.Entity):
     hosting_lobby = Optional('Lobby', reverse='host')
     position = Optional('Position')
     hand = Set('Card')
-
 
 class Lobby(db.Entity):
     name = PrimaryKey(str)
@@ -21,14 +19,12 @@ class Lobby(db.Entity):
     users = Set(User, reverse='lobby')
     host = Required(User, reverse='hosting_lobby')
     game = Optional('Game')
-
-
+    
 class Position(db.Entity):
     id = PrimaryKey(int, auto=True)
     user = Required(User)
     game = Required('Game', reverse='positions')
     turn = Optional('Game', reverse='turn')
-
 
 class Game(db.Entity):
     lobby = PrimaryKey(Lobby)
@@ -38,7 +34,6 @@ class Game(db.Entity):
     all_cards = Set('Card', reverse='game_associated')
     deck_cards = Set('Card', reverse='game_deck')
 
-
 class Card(db.Entity):
     id = PrimaryKey(int, auto=True)
     name = Required(str)
@@ -47,7 +42,6 @@ class Card(db.Entity):
     game_associated = Required(Game, reverse='all_cards')
     game_deck = Optional(Game, reverse='deck_cards')
     user_hand = Optional(User)
-
 
 db.bind(provider='sqlite', filename=DATABASE_FILENAME, create_db=True)
 db.generate_mapping(create_tables=True)
