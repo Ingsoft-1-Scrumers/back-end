@@ -1,16 +1,16 @@
-from pony.orm import (Database, Required, Set, Optional, PrimaryKey)
+from pony.orm import *
+from settings import DATABASE_FILENAME
 
 db = Database()
 
 class User(db.Entity):
     name = PrimaryKey(str)
-    is_alive = Optional(bool)
+    is_alive = Optional(bool, default=True)
     lobby = Optional('Lobby', reverse='users')
     hosting_lobby = Optional('Lobby', reverse='host')
     position = Optional('Position')
-    hand = Set('Card', reverse = 'user_hand')
-    game_in = Optional('Game', reverse='users')
-    
+    hand = Set('Card')
+
 class Lobby(db.Entity):
     name = PrimaryKey(str)
     password = Optional(str)
@@ -25,11 +25,9 @@ class Position(db.Entity):
     user = Required(User)
     game = Required('Game', reverse='positions')
     turn = Optional('Game', reverse='turn')
-    
+
 class Game(db.Entity):
-    name = Required(str)
     lobby = PrimaryKey(Lobby)
-    users = Set('User', reverse = 'game_in')
     amount_players = Required(int, size=8, unsigned=True)
     turn = Required(Position, reverse='turn')
     positions = Set(Position, reverse='game')
@@ -43,8 +41,7 @@ class Card(db.Entity):
     description = Required(str)
     game_associated = Required(Game, reverse='all_cards')
     game_deck = Optional(Game, reverse='deck_cards')
-    user_hand = Optional(User, reverse='hand')
+    user_hand = Optional(User)
 
-
-db.bind(provider='sqlite', filename='user_db.sqlite', create_db=True)
+db.bind(provider='sqlite', filename=DATABASE_FILENAME, create_db=True)
 db.generate_mapping(create_tables=True)

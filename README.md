@@ -49,16 +49,6 @@ Para levantar el servidor ejecutamos:
 (venv) $ uvicorn app:app --reload
 ```
 
-## Antes de correr los tests
-
-Si se utiliza el MakeFile proporcionado por los profes para correr los tests, se debe correr estos comandos antes de ejecutar el MakeFile:
-
-```bash
-(venv) $ cd /path/to/back-end/directory/src
-(venv) $ export ENVIRONMENT="test"
-(venv) $ export PYTHONPATH="/path/to/back-end/directory/src/tests"
-```
-
 ## Pagina para probar nuestra API
 
 Esta [pagina web](https://reqbin.com/) que te permite hacer requests HTTP a la API. Se necesita tener Chrome + esta [Extensión](https://chrome.google.com/webstore/detail/reqbin-http-client/gmmkjpcadciiokjpikmkkmapphbmdjok) instalada para poder usarla.
