@@ -1,4 +1,4 @@
-from models import User, Lobby, Game, Card
+from models import *
 from pony.orm import db_session
 from settings import CARDS_PER_USER
 from template import ALL_TEMPLATES
@@ -198,3 +198,16 @@ class CardRepository:
         new_deck = this_game.all_cards.select(lambda card: card.user_hand == None)
         for card in new_deck:
             card.game_deck = this_game
+
+class PositionRepository:
+
+    @db_session
+    def create_position(self, user: User, game: Game, turn):
+        Position(user=user, game=game, turn=turn)
+
+    @db_session
+    def get_position(user: User) -> dict:
+        position = Position.get(user=user)
+        if position is None:
+            raise ValueError("Position does not exist")
+        return {'username': user.name, 'position': position.id}
