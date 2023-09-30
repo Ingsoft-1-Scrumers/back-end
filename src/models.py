@@ -1,57 +1,50 @@
-from pony.orm import (Database, Required, Set, Optional)
+from pony.orm import (Database, Required, Set, Optional, PrimaryKey)
 
 db = Database()
 
+class User(db.Entity):
+    name = PrimaryKey(str)
+    is_alive = Optional(bool)
+    lobby = Optional('Lobby', reverse='users')
+    hosting_lobby = Optional('Lobby', reverse='host')
+    position = Optional('Position')
+    hand = Set('Card', reverse = 'user_hand')
+    game_in = Optional('Game', reverse='users')
+    
+class Lobby(db.Entity):
+    name = PrimaryKey(str)
+    password = Optional(str)
+    min_players = Required(int, size=8)
+    max_players = Required(int, size=8)
+    users = Set(User, reverse='lobby')
+    host = Required(User, reverse='hosting_lobby')
+    game = Optional('Game')
+    
+class Position(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    user = Required(User)
+    game = Required('Game', reverse='positions')
+    turn = Optional('Game', reverse='turn')
+    
 class Game(db.Entity):
     name = Required(str)
-    amount_players = Required(int)
+    lobby = PrimaryKey(Lobby)
     users = Set('User', reverse = 'game_in')
-    all_cards = Set('Card', reverse = 'game_associated')
-    deck_cards = Set('Card', reverse = 'game_deck')  # One-to-many relationship: one game can have many cards in the deck
-    
-    
-class User(db.Entity):
-    name = Required(str)
-    hand = Set('Card', reverse = 'user_hand')
-    game_in = Optional(Game, reverse='users')
-    
+    amount_players = Required(int, size=8, unsigned=True)
+    turn = Required(Position, reverse='turn')
+    positions = Set(Position, reverse='game')
+    all_cards = Set('Card', reverse='game_associated')
+    deck_cards = Set('Card', reverse='game_deck')
+
 class Card(db.Entity):
-    card_name = Required(str)
-    card_type = Required(str)
+    id = PrimaryKey(int, auto=True)
+    name = Required(str)
+    type = Required(str)
     description = Required(str)
     game_associated = Required(Game, reverse='all_cards')
     game_deck = Optional(Game, reverse='deck_cards')
     user_hand = Optional(User, reverse='hand')
-    
 
-    #user = Optional(User)
 
 db.bind(provider='sqlite', filename='user_db.sqlite', create_db=True)
 db.generate_mapping(create_tables=True)
-
-"""
-from card_repository import CardRepository
-repo = CardRepository()
-repo.create_game("lucia game", 4)
-from models import Game
-Game.select().show()
-from models import Card
-from models import User
-Card.select().show()
-from util import deckrepository
-drepo = deckrepository(repo, Game[1])
-
-drepo.create_deck()
-Card.select().show()
-
-repo.create_user("luciaa")
-repo.create_user("juli")
-
-User[1].game_in = Game[1]
-User[2].game_in = Game[1]
-
-repo.deal_cards_all_users(Game[1])
-Card.select().show()
-repo.steal_card_from_deck(User[1])
-
-"""
