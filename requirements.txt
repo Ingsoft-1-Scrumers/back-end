@@ -3,4 +3,3 @@ pony==0.7.16
 requests
 pytest
 httpx
-

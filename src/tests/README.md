@@ -1,47 +1,35 @@
-# Running this app
+# Testing
 
-First, you have to create a venv and install the requirements. 
+## Antes de correr los tests
 
-```
-$ python3 -m venv venv
-$ source venv/bin/activate
-$ pip install -r requirements.txt
-```
+Si se utiliza el MakeFile proporcionado por los profes para correr los tests, se debe correr estos comandos antes de ejecutar el MakeFile:
 
-Move to the right folder and  export the configuration variables. 
-You have to do this for two variables `ENVIRONMENT` and `PYTHONPATH`. 
-Then you can start the app. For example:
-
-```
-$ cd src
-.../src/ $ export ENVIRONMENT="production"
-.../src/ $ export PYTHONPATH="/tu/ruta/del/proyecto/src/"
-.../src/ $ uvicorn app:app --reload
+```bash
+(venv) $ cd /path/to/back-end/directory/src
+(venv) $ export ENVIRONMENT="test"
+(venv) $ export PYTHONPATH="/path/to/back-end/directory/src/tests"
 ```
 
-Possible values of ENVIRONMENT are `production`, `test` or `development`.
-For each value a new database is created.
+## Comandos para correr los tests
 
-## Testing
+Pararse en el directorio `src` y ejecutar los siguientes comandos de acuerdo al tipo de test. Si salta un error de module not found, agregar un archivo vacio `__init__.py` en el directorio `tests` y volver a ejecutar el comando.
 
-You have a beatiful Makefile to run the tests of this app.
-To run unitest run:
+Para correr unit tests:
 
-```
-$ make run_unit_tests
+```bash
+make run_unit_tests
 ```
 
-To run integration tests:
+Para correr integration tests:
 
-```
-$ make run_integration_tests
-```
-
-To run end to end test, first you have to up the app with `ENVIRONMENT="test"
-and then run:
-
-```
-$ make run_end2end_tests
+```bash
+make run_integration_tests
 ```
 
-You need internet connection to run these tests.
+Para correr end to end tests. Primero hay que levantar el servidor con `ENVIRONMENT="test"` y luego ejecutar:
+
+```bash
+make run_end2end_tests
+```
+
+Se necesita tener conexion a internet para correr los tests end to end.

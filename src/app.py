@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from user_repository import UserRepository
-from lobby_repository import LobbyRepository
+from repository import LobbyRepository, UserRepository
 
 app = FastAPI()
 
@@ -67,7 +66,7 @@ async def join_lobby(lobby_name: str, user_name: str, password: str):
         raise HTTPException(status_code=500, detail='An error occurred while joining the lobby')
     
 @app.get('/lobby_users/{lobby_name}')
-async def get_lobby(lobby_name: str, user_name: str):
+async def get_lobby_users(lobby_name: str, user_name: str):
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
 
@@ -77,7 +76,7 @@ async def get_lobby(lobby_name: str, user_name: str):
     if not (lobby_repo.lobby_exists(lobby_name)):
         raise HTTPException(status_code=404, detail='This lobby name does not exist')
     
-    if not (lobby_repo.is_user_in_lobby(lobby_name, user_name)):
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
         raise HTTPException(status_code=401, detail='This user is not in the lobby')
     
     try:

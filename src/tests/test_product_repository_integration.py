@@ -1,26 +1,18 @@
 import pytest
 from pony.orm import count, db_session
 
-from user_repository import UserRepository
 from models import User
-
+from repository import UserRepository
 
 @pytest.fixture
 def user_repository():
     return UserRepository()
 
 """
-@pytest.mark.integration_test
-@db_session
-def test_get_products(user_repository: UserRepository):
-    list_of_products = user_repository.get_products()
-    assert len(list_of_products) == count(User.select())
-"""
-
-"""
-Prubea de integración:
+Prueba de integracion:
 Insertar un nuevo producto en la base de datos y aumentar la cantidad total de usuarios en uno
 """
+
 @pytest.mark.integration_test
 def test_create_user(user_repository: UserRepository):
 

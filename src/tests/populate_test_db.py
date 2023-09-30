@@ -2,7 +2,6 @@ from pony.orm import db_session, count
 
 from models import User
 
-
 @db_session
 def load_data_for_test():
     users = ['User_A', 'User_B']

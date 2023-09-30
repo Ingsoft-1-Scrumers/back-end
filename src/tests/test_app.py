@@ -29,6 +29,8 @@ def test_create_user(mock_UserRepository, user):
     mock_UserRepository.return_value = mock_repository
 
     response = client.post("/create_user/?user_name=User1")
+    assert response.status_code == 200
+    assert response.json() == {'message': 'User created'}
 
 @patch('app.UserRepository')
 def test_create_user__user_already_exists(mock_UserRepository):
@@ -256,13 +258,13 @@ def test_join_lobby__error(mock_UserRepository, mock_LobbyRepository):
 # View lobby players tests
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
-def test_get_lobby(mock_UserRepository, mock_LobbyRepository, lobby_players):
+def test_get_lobby_users(mock_UserRepository, mock_LobbyRepository, lobby_players):
     mock_repository_user = MagicMock()
     mock_repository_lobby = MagicMock()
 
     mock_repository_user.user_exists.return_value = True
+    mock_repository_user.is_user_in_lobby.return_value = True
     mock_repository_lobby.lobby_exists.return_value = True
-    mock_repository_lobby.is_user_in_lobby.return_value = True
     mock_repository_lobby.get_lobby_users.return_value = lobby_players
 
     mock_UserRepository.return_value = mock_repository_user
@@ -273,7 +275,7 @@ def test_get_lobby(mock_UserRepository, mock_LobbyRepository, lobby_players):
     assert response.json() == lobby_players
 
 @patch('app.UserRepository')
-def test_get_lobby__user_does_not_exist(mock_UserRepository):
+def test_get_lobby_users__user_does_not_exist(mock_UserRepository):
     mock_repository_user = MagicMock()
 
     mock_repository_user.user_exists.return_value = False
@@ -286,7 +288,7 @@ def test_get_lobby__user_does_not_exist(mock_UserRepository):
 
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
-def test_get_lobby__lobby_does_not_exist(mock_UserRepository, mock_LobbyRepository):
+def test_get_lobby_users__lobby_does_not_exist(mock_UserRepository, mock_LobbyRepository):
     mock_repository_user = MagicMock()
     mock_repository_lobby = MagicMock()
 
@@ -302,13 +304,13 @@ def test_get_lobby__lobby_does_not_exist(mock_UserRepository, mock_LobbyReposito
 
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
-def test_get_lobby__user_not_in_lobby(mock_UserRepository, mock_LobbyRepository):
+def test_get_lobby_users__user_not_in_lobby(mock_UserRepository, mock_LobbyRepository):
     mock_repository_user = MagicMock()
     mock_repository_lobby = MagicMock()
 
     mock_repository_user.user_exists.return_value = True
+    mock_repository_user.is_user_in_lobby.return_value = False
     mock_repository_lobby.lobby_exists.return_value = True
-    mock_repository_lobby.is_user_in_lobby.return_value = False
 
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
@@ -319,13 +321,13 @@ def test_get_lobby__user_not_in_lobby(mock_UserRepository, mock_LobbyRepository)
 
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
-def test_get_lobby__error(mock_UserRepository, mock_LobbyRepository):
+def test_get_lobby_users__error(mock_UserRepository, mock_LobbyRepository):
     mock_repository_user = MagicMock()
     mock_repository_lobby = MagicMock()
 
     mock_repository_user.user_exists.return_value = True
+    mock_repository_user.is_user_in_lobby.return_value = True
     mock_repository_lobby.lobby_exists.return_value = True
-    mock_repository_lobby.is_user_in_lobby.return_value = True
     mock_repository_lobby.get_lobby_users.side_effect = Exception()
 
     mock_UserRepository.return_value = mock_repository_user
