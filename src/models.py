@@ -29,7 +29,7 @@ class Position(db.Entity):
 class Game(db.Entity):
     lobby = PrimaryKey(Lobby)
     amount_players = Required(int, size=8, unsigned=True)
-    turn = Required(Position, reverse='turn')
+    turn = Optional(Position, reverse='turn')
     positions = Set(Position, reverse='game')
     all_cards = Set('Card', reverse='game_associated')
     deck_cards = Set('Card', reverse='game_deck')

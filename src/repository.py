@@ -60,6 +60,19 @@ class LobbyRepository:
         if lobby is None:
             raise ValueError("Lobby does not exist with name: {}".format(lobby_name))
         return lobby
+    
+    @db_session
+    def get_game(self, lobby_name: str):
+        lobby = Lobby.get(name=lobby_name)
+        game = lobby.game
+        if game is None:
+            raise ValueError("Game does not exist with name: {}".format(lobby_name))
+        return game
+
+    @db_session
+    def is_game_started(self, lobby_name: str) -> bool:
+        lobby = Lobby.get(name=lobby_name)
+        return lobby.game is not None
 
     @db_session 
     def lobby_exists(self, lobby_name: str) -> bool:
@@ -69,6 +82,11 @@ class LobbyRepository:
     def is_lobby_full(self, lobby_name: str) -> bool:
         lobby = Lobby.get(name=lobby_name)
         return len(lobby.users) == lobby.max_players
+    
+    @db_session
+    def can_start_game(self, lobby_name: str) -> bool:
+        lobby = Lobby.get(name=lobby_name)
+        return len(lobby.users) >= lobby.min_players
     
     @db_session
     def is_password_correct(self, lobby_name: str, password: str) -> bool:
@@ -87,88 +105,111 @@ class LobbyRepository:
         lobby.users.add(user) # No es necesario modificar el atributo lobby del usuario, se hace automáticamente
 
     @db_session
+    def get_amount_users(self, lobby_name: str) -> int:
+        lobby = Lobby.get(name=lobby_name)
+        return len(lobby.users)
+
+    @db_session
     def get_lobby_users(self, lobby_name: str) -> dict:
         lobby = Lobby.get(name=lobby_name)
         users_dict = [{'name': user.name} for user in lobby.users]
         users_dict.append({'host': lobby.host.name})
         return users_dict
 
-''' Work in progress
+
 class GameRepository:
 
     @db_session
-    def create_Game(self, name: str, amount_players: int):
-        Game(name=name, amount_players=amount_players)
+    def create_game(self, lobby : Lobby, amount_players : int):
+        Game(lobby=lobby, amount_players=amount_players)
 
     @db_session
-    def get_all_cards_this_game(self, name: str):
-        repo_card_Repository = CardRepository()
-        Game.lobby.get(name=name).all_cards = repo_card_Repository.create_cards_for_this_game(name)
+    def get_all_cards_(self, name: str):
+        game = Game.get(name=name)
+        return game.all_cards
+    
+    @db_session
+    def get_all_positions(self, game: Game):
+        return game.positions
 
     @db_session
-    def give_users(self, name: str) -> Set(User):
-        repo_user = UserRepository()
-        return repo_user.get_all_users()
-'''
+    def assign_turn(self, position: Position, game: Game):
+        game.turn = position
+
+    @db_session
+    def get_users_positions(self, game: Game) -> dict:
+        positions = game.positions
+        users = [{'name': position.user.name, 'position': position.id} for position in positions]
+        return users
+
+
 
 class CardRepository:
+
+    # Metodos para crear el mazo
+    @db_session
+    def create_deck(self, game : Game):
+        self.create_cards_for_this_game(game)
+        self.add_cards_to_deck(game)
+
+    @db_session
+    def create_cards_for_this_game(self, game : Game):
+        for template_name in ALL_TEMPLATES: 
+            amount_cards_template = template_name['quantity_numb_players'][game.amount_players - 4]
+            for cards in range(amount_cards_template):
+                self.create_card(template_name, game)
 
     @db_session
     def create_card(self, card_template, game_associated : Game):
         Card(name = card_template["card_name"], 
             type = card_template["card_type"],
-             description = card_template["description"],
-             game_associated = game_associated)
+            description = card_template["description"],
+            game_associated = game_associated)
+    
+    @db_session
+    def add_cards_to_deck(self, game : Game):
+        for card_created in Card.select(game_associated = game):
+            self.put_card_in_deck(card_created, game)
 
     @db_session
-    def put_card_in_deck(self, card_to_put : Card, game_with_deck : Game):
-        card_to_put.game_deck = game_with_deck
+    def put_card_in_deck(self, card : Card, game_deck : Game):
+        card.game_deck = game_deck
+            
+    # Metodos para repartir cartas
+    @db_session
+    def deal_cards_all_users(self, lobby_name: str):
+        lobby_repo = LobbyRepository()
+        game = lobby_repo.get_game(lobby_name)
+        users = lobby_repo.get_lobby_users(lobby_name)
+        for user in users:
+            self.deal_4_cards_user(user, game)   
 
+    @db_session 
+    def deal_4_cards_user(self, user : User, game : Game):
+        for number_card in range(CARDS_PER_USER):
+            random_card = self.random_card_from_deck_ingoring_panic(game)
+            random_card.user_hand = user
+        
     @db_session
-    def create_cards_for_this_game(self, this_game : Game):
-        for template_name in ALL_TEMPLATES: 
-            amount_cards_template = template_name['quantity_numb_players'][this_game.amount_players - 4]
-            for card_number in range(amount_cards_template):
-                self.create_card(template_name, this_game)
-                
-    @db_session
-    def add_cards_to_deck(self, this_game : Game):
-        for card_created in Card.select(game_associated = this_game):
-            self.put_card_in_deck(card_created, this_game)
-            
-    @db_session
-    def create_deck(self, this_game : Game):
-        self.create_cards_for_this_game(this_game)
-        self.add_cards_to_deck(this_game)
-            
+    def random_card_from_deck_ingoring_panic(self, game : Game) -> Card:
+        deck_without_panic = game.deck_cards.select(lambda card: card.type != "Panico")   #tipo Query
+        random_card = deck_without_panic.random(1)[0] #saco una carta del mazo
+        self.remove_card_from_deck(random_card) #elimino la carta del mazo
+        return random_card
+
     @db_session
     def remove_card_from_deck(self, card_discard : Card):
-        this_game = card_discard.game_associated
-        this_game.deck_cards.remove(card_discard)
+        game = card_discard.game_associated
+        game.deck_cards.remove(card_discard)
     
+    
+    # Metodos para robar cartas
     @db_session
     def random_card_from_deck(self, this_game : Game) -> Card:
         random_card = this_game.deck_cards.random(1)[0] #saco una carta del mazo
         self.remove_card_from_deck(random_card) #elimino la carta del mazo
         return random_card
     
-    @db_session
-    def random_card_from_deck_ingoring_panic(self, this_game : Game) -> Card:
-        deck_without_panic = this_game.deck_cards.select(lambda card: card.type != "Panico")   #tipo Query
-        random_card = deck_without_panic.random(1)[0] #saco una carta del mazo
-        self.remove_card_from_deck(random_card) #elimino la carta del mazo
-        return random_card
-
-    @db_session #UserRepository
-    def deal_4_cards_user(self, this_user : User, this_game : Game):
-        for number_card in range(CARDS_PER_USER):
-            random_card = self.random_card_from_deck_ingoring_panic(this_game)
-            random_card.user_hand = this_user
-            
-    @db_session
-    def deal_cards_all_users(self, this_game : Game):
-        for actual_user in this_game.users:
-            self.deal_4_cards_user(actual_user, this_game)
             
     @db_session
     def steal_card_from_deck(self, this_user : User) -> dict:
@@ -202,12 +243,13 @@ class CardRepository:
 class PositionRepository:
 
     @db_session
-    def create_position(self, user: User, game: Game, turn):
-        Position(user=user, game=game, turn=turn)
+    def create_position(self, user: User, game: Game):
+        Position(user=user, game=game)
 
     @db_session
-    def get_position(user: User) -> dict:
+    def get_position(self, user: User) -> dict:
         position = Position.get(user=user)
         if position is None:
             raise ValueError("Position does not exist")
         return {'username': user.name, 'position': position.id}
+    
