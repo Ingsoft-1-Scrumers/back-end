@@ -19,7 +19,7 @@ class Lobby(db.Entity):
     users = Set(User, reverse='lobby')
     host = Required(User, reverse='hosting_lobby')
     game = Optional('Game')
-
+    
 class Position(db.Entity):
     id = PrimaryKey(int, auto=True)
     user = Required(User)

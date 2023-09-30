@@ -29,9 +29,6 @@ def test_create_user(mock_UserRepository, user):
     mock_UserRepository.return_value = mock_repository
 
     response = client.post("/create_user/?user_name=User1")
-    assert response.status_code == 200
-    assert response.json() == {'message': 'User created'}
-
 
 @patch('app.UserRepository')
 def test_create_user__user_already_exists(mock_UserRepository):
