@@ -1,4 +1,4 @@
-from models import User, Lobby
+from models import User, Lobby, Game
 from pony.orm import db_session
 
 class UserRepository:
@@ -91,22 +91,18 @@ class LobbyRepository:
         users_dict.append({'host': lobby.host.name})
         return users_dict
 
-'''
+''' Work in progress
 class GameRepository:
 
-    #crear game necesita el nombre del juego y la cantidad de jugadores
     @db_session
     def create_Game(self, name: str, amount_players: int):
         Game(name=name, amount_players=amount_players)
 
-       
-    #obtener todas las cartas de un juego
     @db_session
     def get_all_cards_this_game(self, name: str):
         repo_card_Repository = CardRepository()
         Game.lobby.get(name=name).all_cards = repo_card_Repository.create_cards_for_this_game(name)
 
-    #obtener el conjunto de usuarios de un juego
     @db_session
     def give_users(self, name: str) -> Set(User):
         repo_user = UserRepository()

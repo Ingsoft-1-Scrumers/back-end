@@ -336,7 +336,9 @@ def test_get_lobby_users__error(mock_UserRepository, mock_LobbyRepository):
     response = client.get('/lobby_users/Lobby1?user_name=User1')
     assert response.status_code == 500
     assert response.json() == {'detail': 'An error occurred while getting the lobby users'}
-    
+
+# Start game tests
+''' Work in progress
 @patch('app.GameRepository')
 @patch('app.LobbyRepository')
 def test_start_game(mock_LobbyRepository, mock_GameRepository):
@@ -351,3 +353,4 @@ def test_start_game(mock_LobbyRepository, mock_GameRepository):
     response = client.post("/start_game/?game_name=Game1")
     assert response.status_code == 200
     assert response.json() == {'message': 'Game started successfully'}
+'''

@@ -85,6 +85,7 @@ async def get_lobby_users(lobby_name: str, user_name: str):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the lobby users')
 
+''' Work in progress
 @app.post('/start_game/')
 async def start_game(game_name: str):
     repo_lobby = LobbyRepository()
@@ -95,3 +96,4 @@ async def start_game(game_name: str):
         return {'message': 'Game started successfully'}
     except Exception as e:
         return {'message': 'An error occurred while starting the game for cause: {}'.format(e)}
+'''
