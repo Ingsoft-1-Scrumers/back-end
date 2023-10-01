@@ -166,7 +166,7 @@ async def get_users_position(lobby_name: str, user_name: str):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the users position')
-
+    
 '''
 @app.get('/get_user_hand/{user_name}')
 async def get_user_hand(user_name: str):

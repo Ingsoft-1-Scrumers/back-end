@@ -44,10 +44,10 @@ Valores de `variable` dependiendo de la etapa de desarrollo. Cada una va a tener
 
 ## Correr el servidor
 
-Para levantar el servidor ejecutamos:
+Se les proporciona un Makefile con el que pueden correr la aplicacion. Correr el comando:
 
 ```bash
-(venv) $ uvicorn app:app --reload
+(venv) $ make run_app
 ```
 
 ## Pagina para probar nuestra API

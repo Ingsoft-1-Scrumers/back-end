@@ -460,5 +460,3 @@ def test_start_game__error(mock_UserRepository, mock_LobbyRepository):
     response = client.post('/start_game/?lobby_name=Lobby1&host_name=User1')
     assert response.status_code == 500
     assert response.json() == {'detail': 'An error occurred while starting the game'}
-
-# Is game started tests
