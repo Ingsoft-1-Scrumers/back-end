@@ -42,6 +42,14 @@ class UserRepository:
         lobby = lobby_repo.get_lobby(lobby_name)
         return lobby.host.name == user_name
 
+    @db_session 
+    def get_user_hand(self, user_name: str) -> dict:
+        user = User.select(name=user_name)
+        hand_dict = [{'name': card.name, 
+                      'type': card.type, 
+                      'description': card.description} for card in user.first().hand]
+        return hand_dict
+
 
 class LobbyRepository:
 
@@ -216,10 +224,12 @@ class CardRepository:
     
             
     @db_session
-    def steal_card_from_deck(self, this_user : User) -> dict:
-        game_user = this_user.game_in
-        random_card = self.random_card_from_deck(game_user)
-        random_card.user_hand = this_user
+    def steal_card_from_deck(self, user_name : str) -> dict:
+        user = User.get(name=user_name)
+        lobby = user.lobby
+        game = lobby.game
+        random_card = self.random_card_from_deck(game)
+        random_card.user_hand = user
         card_dict = {'name': random_card.name, 
                       'type': random_card.type, 
                       'description': random_card.description}
@@ -229,14 +239,6 @@ class CardRepository:
     def discard_card_from_hand(self, this_user : User, card_discard : Card):
         hand_to_modify = this_user.hand
         hand_to_modify.remove(card_discard)
-
-    @db_session #UserRepository
-    def get_user_hand(self, user_name: str) -> dict:
-        user = User.select(name=user_name)
-        hand_dict = [{'name': card.name, 
-                      'type': card.type, 
-                      'description': card.description} for card in user.first().hand]
-        return hand_dict
     
     @db_session
     def recreate_empty_deck(self, this_game : Game):

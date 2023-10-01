@@ -30,6 +30,14 @@ class GameLogic:
             position_repo.create_position(user, num, game)
 
     @db_session
+    def assign_positions(self, users: Set(User), game: Game):
+        position_repo = PositionRepository()
+        num_order = 1
+        for user in users:
+            position_repo.create_position(user, num_order, game)
+            num_order += 1
+
+    @db_session
     def assign_turn(self, game: Game):
         position_repo = PositionRepository()
         pos_1 = position_repo.get_n_position(1, game)

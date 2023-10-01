@@ -15,6 +15,7 @@ Python 3.10.12
 ## Crear entorno virtual
 
 Vamos a crear un entorno virtual para instalar las dependencias de nuestro proyecto. En el directorio `home` ejecutamos:
+El nombre del entorno virtual es `venv`, se ejecuta una sola vez y cada vez que queremos trabajar en el proyecto ejecutamos `source venv/bin/activate` para activar el entorno virtual.
 
 ```bash
 $ python3 -m venv venv

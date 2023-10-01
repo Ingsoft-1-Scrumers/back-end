@@ -337,26 +337,128 @@ def test_get_lobby_users__error(mock_UserRepository, mock_LobbyRepository):
     assert response.status_code == 500
     assert response.json() == {'detail': 'An error occurred while getting the lobby users'}
 
-
+# Start game tests
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
 @patch('app.GameLogic')
 def test_start_game(mock_LobbyRepository, mock_UserRepository, mock_GameLogic):
     mock_repository_user = MagicMock()
     mock_repository_lobby = MagicMock()
-    mock_repository_gl = MagicMock()
 
     mock_repository_user.user_exists.return_value = True
     mock_repository_lobby.lobby_exists.return_value = True
     mock_repository_user.is_user_in_lobby.return_value = True
     mock_repository_lobby.can_start_game.return_value = True
     mock_repository_user.is_user_host.return_value = True
-    mock_repository_gl.start_game.return_value = {'message': 'Game started successfully'}
 
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
-    mock_GameLogic.return_value = mock_repository_gl
 
     response = client.post('/start_game/?lobby_name=Lobby1&host_name=User1')
     assert response.status_code == 200
     assert response.json() == {'message': 'Game started successfully'}
+
+@patch('app.UserRepository')
+def test_start_game__user_does_not_exist(mock_UserRepository):
+    mock_repository_user = MagicMock()
+
+    mock_repository_user.user_exists.return_value = False
+
+    mock_UserRepository.return_value = mock_repository_user
+
+    response = client.post('/start_game/?lobby_name=Lobby1&host_name=User1')
+    assert response.status_code == 404
+    assert response.json() == {'detail': 'This user does not exist'}
+
+@patch('app.LobbyRepository')
+@patch('app.UserRepository')
+def test_start_game__lobby_does_not_exist(mock_UserRepository, mock_LobbyRepository):
+    mock_repository_user = MagicMock()
+    mock_repository_lobby = MagicMock()
+
+    mock_repository_user.user_exists.return_value = True
+    mock_repository_lobby.lobby_exists.return_value = False
+
+    mock_UserRepository.return_value = mock_repository_user
+    mock_LobbyRepository.return_value = mock_repository_lobby
+
+    response = client.post('/start_game/?lobby_name=Lobby1&host_name=User1')
+    assert response.status_code == 404
+    assert response.json() == {'detail': 'This lobby name does not exist'}
+
+@patch('app.LobbyRepository')
+@patch('app.UserRepository')
+def test_start_game__user_not_in_lobby(mock_UserRepository, mock_LobbyRepository):
+    mock_repository_user = MagicMock()
+    mock_repository_lobby = MagicMock()
+
+    mock_repository_user.user_exists.return_value = True
+    mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_user.is_user_in_lobby.return_value = False
+
+    mock_UserRepository.return_value = mock_repository_user
+    mock_LobbyRepository.return_value = mock_repository_lobby
+
+    response = client.post('/start_game/?lobby_name=Lobby1&host_name=User1')
+    assert response.status_code == 401
+    assert response.json() == {'detail': 'This user is not in the lobby'}
+
+@patch('app.LobbyRepository')
+@patch('app.UserRepository')
+def test_start_game__not_enough_players(mock_UserRepository, mock_LobbyRepository):
+    mock_repository_user = MagicMock()
+    mock_repository_lobby = MagicMock()
+
+    mock_repository_user.user_exists.return_value = True
+    mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_user.is_user_in_lobby.return_value = True
+    mock_repository_lobby.can_start_game.return_value = False
+
+    mock_UserRepository.return_value = mock_repository_user
+    mock_LobbyRepository.return_value = mock_repository_lobby
+
+    response = client.post('/start_game/?lobby_name=Lobby1&host_name=User1')
+    assert response.status_code == 406
+    assert response.json() == {'detail': 'This lobby does not have enough players'}
+
+@patch('app.LobbyRepository')
+@patch('app.UserRepository')
+def test_start_game__user_not_host(mock_UserRepository, mock_LobbyRepository):
+    mock_repository_user = MagicMock()
+    mock_repository_lobby = MagicMock()
+
+    mock_repository_user.user_exists.return_value = True
+    mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_user.is_user_in_lobby.return_value = True
+    mock_repository_lobby.can_start_game.return_value = True
+    mock_repository_user.is_user_host.return_value = False
+
+    mock_UserRepository.return_value = mock_repository_user
+    mock_LobbyRepository.return_value = mock_repository_lobby
+
+    response = client.post('/start_game/?lobby_name=Lobby1&host_name=User1')
+    assert response.status_code == 401
+    assert response.json() == {'detail': 'This user is not the host of the lobby'}
+
+@patch('app.LobbyRepository')
+@patch('app.UserRepository')
+def test_start_game__error(mock_UserRepository, mock_LobbyRepository):
+    mock_repository_user = MagicMock()
+    mock_repository_lobby = MagicMock()
+    mock_repository_game = MagicMock()
+
+    mock_repository_user.user_exists.return_value = True
+    mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_user.is_user_in_lobby.return_value = True
+    mock_repository_lobby.can_start_game.return_value = True
+    mock_repository_user.is_user_host.return_value = True
+    mock_repository_game.start_game.side_effect = Exception()
+
+    mock_UserRepository.return_value = mock_repository_user
+    mock_LobbyRepository.return_value = mock_repository_lobby
+
+    response = client.post('/start_game/?lobby_name=Lobby1&host_name=User1')
+    assert response.status_code == 500
+    assert response.json() == {'detail': 'An error occurred while starting the game'}
+
+# Is game started tests

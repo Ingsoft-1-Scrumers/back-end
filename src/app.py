@@ -125,6 +125,7 @@ async def start_game(lobby_name: str, host_name: str):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while starting the game')
 
+# Endpoints para obtener información del juego
 @app.get('/is_game_started/{lobby_name}')
 async def is_game_started(lobby_name: str):
     lobby_repo = LobbyRepository()
@@ -133,7 +134,10 @@ async def is_game_started(lobby_name: str):
         raise HTTPException(status_code=404, detail='This lobby name does not exist')
     
     try:
-        return lobby_repo.is_game_started(lobby_name)
+        if lobby_repo.is_game_started(lobby_name):
+            return {'message': 'Game has started'}
+        else:
+            return {'message': 'Game has not started'}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while checking if the game is started')
@@ -158,17 +162,16 @@ async def get_users_position(lobby_name: str, user_name: str):
     
     try:
         game = lobby_repo.get_game(lobby_name)
-        return game_repo.get_users_position(game)
+        return game_repo.get_users_positions(game)
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the users position')
 
 '''
-@app.get('/')
+@app.get('/get_user_hand/{user_name}')
 async def get_user_hand(user_name: str):
-    card_repo = CardRepository()    #en realidad debería ser en UserRepository
+    user_repo = UserRepository()  
 
-    
     if not (user_repo.user_exists(user_name)):
         raise HTTPException(status_code=404, detail='This user does not exist')
     
@@ -176,14 +179,23 @@ async def get_user_hand(user_name: str):
         raise HTTPException(status_code=401, detail='This user is not in the lobby')
     
     try:
-        return card_repo.get_user_hand(user_name)
+        return user_repo.get_user_hand(user_name)
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the hand')
-    
+
+
 @app.get('/')
 async def steal_card_from_deck(user_name: str):
     card_repo = CardRepository()
+    user_repo = UserRepository()
+    
+    if not (user_repo.user_exists(user_name)):
+        raise HTTPException(status_code=404, detail='This user does not exist')
+    
+    if not (lobby_repo.is_user_in_lobby(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='This user is not in the lobby')
+    
     try:
         return card_repo.steal_card_from_deck(user_name)
     except Exception as e:
