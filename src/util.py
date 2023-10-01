@@ -1,5 +1,4 @@
 from repository import *
-import random
 
 class GameLogic:
 
@@ -17,18 +16,9 @@ class GameLogic:
         
         card_repo.create_deck(game)
         card_repo.deal_cards_all_users(lobby_name)
-        self.assign_positions(users, user_amount, game)
-        self.assign_turn(game)
-        
-    @db_session
-    def assign_positions(self, users: Set(User), user_amount, game: Game):
-        position_repo = PositionRepository()
-        list_pos = [i for i in range(1, user_amount + 1)]
-        random.shuffle(list_pos)
-        for user in users:
-            num = list_pos.pop()
-            position_repo.create_position(user, num, game)
-            
+        self.assign_positions(users, game)
+        self.assign_turn(game, 1)
+
     @db_session
     def assign_positions(self, users: Set(User), game: Game):
         position_repo = PositionRepository()
@@ -51,12 +41,20 @@ class GameLogic:
             game.turn = new_turn.first()
 
     @db_session
-    def play_card(self, user_name: str, card: Card, lobby_name: str):
+    def play_card(self, user_name: str, id_card: int, lobby_name: str):
         user = User.get(name=user_name)
         lobby = Lobby.get(name=lobby_name)
         card_repo = CardRepository()
-        card_repo.discard_card_from_hand(user, card)
+        card_repo.discard_card_from_hand(user, id_card)
         self.next_turn(lobby.game)
+
+    @db_session
+    def is_user_turn(self, lobby_name: str, user_name: str) -> dict:
+        lobby = Lobby.get(name=lobby_name)
+        game = lobby.game
+        actual_turn = game.turn
+        bool_result = True if (actual_turn.user.name == user_name) else False
+        return {'is_my_turn': bool_result}
 
     @db_session
     def assign_turn(self, game: Game, num: int):

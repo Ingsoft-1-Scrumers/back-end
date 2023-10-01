@@ -46,7 +46,8 @@ class UserRepository:
     @db_session 
     def get_user_hand(self, user_name: str) -> dict:
         user = User.select(name=user_name)
-        hand_dict = [{'name': card.name, 
+        hand_dict = [{'id': card.id,
+                    'name': card.name, 
                       'type': card.type, 
                       'description': card.description} for card in user.first().hand]
         return hand_dict
@@ -150,10 +151,11 @@ class GameRepository:
         game.turn = position
 
     @db_session
-    def get_users_position(self, game: Game) -> dict:
+    def get_users_position(self, lobby_name: str) -> dict:
+        lobby = Lobby.get(name=lobby_name)
+        game = lobby.game
         positions = game.positions
         users = [{'name': position.user.name, 'position': position.number} for position in positions]
-        json.dumps(users)
         return users
 
     @db_session
@@ -163,7 +165,6 @@ class GameRepository:
         actual_turn = game.turn
         bool_result = True if (actual_turn.user.name == user_name) else False
         return {'is_my_turn': bool_result}
-
 
 class CardRepository:
 
@@ -239,13 +240,15 @@ class CardRepository:
         game = lobby.game
         random_card = self.random_card_from_deck(game)
         random_card.user_hand = user
-        card_dict = {'name': random_card.name, 
+        card_dict = {'id': random_card.id,
+                    'name': random_card.name, 
                       'type': random_card.type, 
                       'description': random_card.description}
         return card_dict
         
     @db_session #UserRepository
-    def discard_card_from_hand(self, this_user : User, card_discard : Card):
+    def discard_card_from_hand(self, this_user : User, id_card : int):
+        card_discard = Card.get(id=id_card)
         hand_to_modify = this_user.hand
         hand_to_modify.remove(card_discard)
     
@@ -254,6 +257,11 @@ class CardRepository:
         new_deck = this_game.all_cards.select(lambda card: card.user_hand == None)
         for card in new_deck:
             card.game_deck = this_game
+
+    '''PARA NO JUGAR ALGO Q NO ME PERTENECE
+    @db_session
+    def is_in_my_hand(self, id_card: int, user_name: str) -> bool:
+    '''
 
 class PositionRepository:
 

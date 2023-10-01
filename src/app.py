@@ -64,6 +64,9 @@ async def join_lobby(lobby_name: str, user_name: str, password: str):
     if not (lobby_repo.lobby_exists(lobby_name)):
         raise HTTPException(status_code=404, detail='This lobby name does not exist')
     
+    if lobby_repo.is_game_started(lobby_name):
+        raise HTTPException(status_code=406, detail='This game has already started')
+
     if lobby_repo.is_lobby_full(lobby_name):
         raise HTTPException(status_code=406, detail='This lobby is full')
     
@@ -161,22 +164,23 @@ async def get_users_position(lobby_name: str, user_name: str):
         raise HTTPException(status_code=401, detail='This user is not in the lobby')
     
     try:
-        game = lobby_repo.get_game(lobby_name)
-        test = game_repo.get_users_position(game)
-        return test
+        return game_repo.get_users_position(lobby_name)
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the users position')
     
-'''
 @app.get('/get_user_hand/{user_name}')
 async def get_user_hand(user_name: str, lobby_name: str):
-    user_repo = UserRepository()  
+    user_repo = UserRepository()
+    lobby_repo = LobbyRepository()  
 
     if not (user_repo.user_exists(user_name)):
         raise HTTPException(status_code=404, detail='This user does not exist')
     
-    if not (lobby_repo.is_user_in_lobby(lobby_name, user_name)):
+    if not (lobby_repo.lobby_exists(lobby_name)):
+        raise HTTPException(status_code=404, detail='This lobby name does not exist')
+    
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
         raise HTTPException(status_code=401, detail='This user is not in the lobby')
     
     try:
@@ -185,16 +189,19 @@ async def get_user_hand(user_name: str, lobby_name: str):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the hand')
 
-
-@app.get('/')
+@app.get('/steal_card_from_deck/{lobby_name}')
 async def steal_card_from_deck(user_name: str, lobby_name: str):
     card_repo = CardRepository()
+    lobby_repo = LobbyRepository()
     user_repo = UserRepository()
     
     if not (user_repo.user_exists(user_name)):
         raise HTTPException(status_code=404, detail='This user does not exist')
     
-    if not (lobby_repo.is_user_in_lobby(lobby_name, user_name)):
+    if not (lobby_repo.lobby_exists(lobby_name)):
+        raise HTTPException(status_code=404, detail='This lobby name does not exist')
+    
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
         raise HTTPException(status_code=401, detail='This user is not in the lobby')
     
     try:
@@ -215,7 +222,7 @@ async def is_my_turn(user_name: str, lobby_name: str):
     if not (lobby_repo.lobby_exists(lobby_name)):
         raise HTTPException(status_code=404, detail='This lobby name does not exist')
     
-    if not (lobby_repo.is_user_in_lobby(lobby_name, user_name)):
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
         raise HTTPException(status_code=401, detail='This user is not in the lobby')
     
     try:
@@ -223,5 +230,32 @@ async def is_my_turn(user_name: str, lobby_name: str):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the bool turn')
-        
-'''
+
+
+@app.post('/play_card/')
+async def play_card(user_name: str, id_card: int, lobby_name: str, target_player_name: str):
+    user_repo = UserRepository()
+    lobby_repo = LobbyRepository()
+    game_logic = GameLogic()
+    
+    if not (user_repo.user_exists(user_name)):
+        raise HTTPException(status_code=404, detail='This user does not exist')
+    
+    if not (user_repo.user_exists(target_player_name)):
+        raise HTTPException(status_code=404, detail='This target player does not exist')
+    
+    if not (lobby_repo.lobby_exists(lobby_name)):
+        raise HTTPException(status_code=404, detail='This lobby name does not exist')
+    
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='This user is not in the lobby')
+    
+    if not (user_repo.is_user_in_lobby(lobby_name, target_player_name)):
+        raise HTTPException(status_code=401, detail='This target player is not in the lobby')
+    
+    try:
+        game_logic.play_card(user_name, id_card, lobby_name)
+        return  {'message': 'Card played successfully'}
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while getting the bool turn')

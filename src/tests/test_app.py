@@ -150,6 +150,7 @@ def test_join_lobby(mock_UserRepository, mock_LobbyRepository):
     mock_repository_user.user_exists.return_value = True
     mock_repository_user.is_user_in_a_lobby.return_value = False
     mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_lobby.is_game_started.return_value = False
     mock_repository_lobby.is_lobby_full.return_value = False
     mock_repository_lobby.is_password_correct.return_value = True
 
@@ -204,6 +205,24 @@ def test_join_lobby__lobby_does_not_exist(mock_UserRepository, mock_LobbyReposit
 
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
+def test_join_lobby__game_already_started(mock_UserRepository, mock_LobbyRepository):
+    mock_repository_user = MagicMock()
+    mock_repository_lobby = MagicMock()
+
+    mock_repository_user.user_exists.return_value = True
+    mock_repository_user.is_user_in_a_lobby.return_value = False
+    mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_lobby.is_game_started.return_value = True
+
+    mock_UserRepository.return_value = mock_repository_user
+    mock_LobbyRepository.return_value = mock_repository_lobby
+
+    response = client.post('/join_lobby/?lobby_name=Lobby1&user_name=User1&password=empty')
+    assert response.status_code == 406
+    assert response.json() == {'detail': 'This game has already started'}
+
+@patch('app.LobbyRepository')
+@patch('app.UserRepository')
 def test_join_lobby__lobby_is_full(mock_UserRepository, mock_LobbyRepository):
     mock_repository_user = MagicMock()
     mock_repository_lobby = MagicMock()
@@ -211,6 +230,7 @@ def test_join_lobby__lobby_is_full(mock_UserRepository, mock_LobbyRepository):
     mock_repository_user.user_exists.return_value = True
     mock_repository_user.is_user_in_a_lobby.return_value = False
     mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_lobby.is_game_started.return_value = False
     mock_repository_lobby.is_lobby_full.return_value = True
 
     mock_UserRepository.return_value = mock_repository_user
@@ -230,6 +250,7 @@ def test_join_lobby__password_is_wrong(mock_UserRepository, mock_LobbyRepository
     mock_repository_user.is_user_in_a_lobby.return_value = False
     mock_repository_lobby.lobby_exists.return_value = True
     mock_repository_lobby.is_lobby_full.return_value = False
+    mock_repository_lobby.is_game_started.return_value = False
     mock_repository_lobby.is_password_correct.return_value = False
 
     mock_UserRepository.return_value = mock_repository_user
@@ -248,6 +269,7 @@ def test_join_lobby__error(mock_UserRepository, mock_LobbyRepository):
     mock_repository_user.user_exists.return_value = True
     mock_repository_user.is_user_in_a_lobby.return_value = False
     mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_lobby.is_game_started.return_value = False
     mock_repository_lobby.is_lobby_full.return_value = False
     mock_repository_lobby.is_password_correct.return_value = True
     mock_repository_lobby.add_user_to_lobby.side_effect = Exception()
