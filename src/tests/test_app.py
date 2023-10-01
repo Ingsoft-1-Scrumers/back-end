@@ -18,11 +18,11 @@ def lobby():
 def lobby_users():
     return {"name1": "User1", "name2" : "User2", "name3" : "User3", "name4" : "User4", "host": "User1"}
 
-@pytest.fixture
+@pytest.fixture #! Revisar si esto esta bien
 def lobby_positions():
     return [{'name': 'User1', 'position': 1}, {'name': 'User2', 'position': 2}, {'name': 'User3', 'position': 3}, {'name': 'User4', 'position': 4}]
 
-# Create user tests
+# Crear usuario tests
 @patch('app.UserRepository')
 def test_create_user(mock_UserRepository, user):
     mock_repository = MagicMock()
@@ -61,7 +61,7 @@ def test_create_user__error(mock_UserRepository):
     assert response.status_code == 500
     assert response.json() == {'detail': 'An error occurred while creating the user'}
 
-# Create lobby tests
+# Crear lobby tests
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
 def test_create_lobby(mock_UserRepository, mock_LobbyRepository, lobby):
@@ -140,7 +140,7 @@ def test_create_lobby__error(mock_UserRepository, mock_LobbyRepository):
     assert response.status_code == 500
     assert response.json() == {'detail': 'An error occurred while creating the lobby'}
 
-# Join lobby tests
+# Unirse a lobby tests
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
 def test_join_lobby(mock_UserRepository, mock_LobbyRepository):
@@ -281,7 +281,7 @@ def test_join_lobby__error(mock_UserRepository, mock_LobbyRepository):
     assert response.status_code == 500
     assert response.json() == {'detail': 'An error occurred while joining the lobby'}
 
-# View lobby players tests
+# Ver usuarios en lobby tests
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
 def test_get_lobby_users(mock_UserRepository, mock_LobbyRepository, lobby_users):
@@ -363,7 +363,7 @@ def test_get_lobby_users__error(mock_UserRepository, mock_LobbyRepository):
     assert response.status_code == 500
     assert response.json() == {'detail': 'An error occurred while getting the lobby users'}
 
-# Start game tests
+# Iniciar juego tests
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
 @patch('app.GameLogic')
@@ -492,7 +492,7 @@ def test_start_game__error(mock_UserRepository, mock_LobbyRepository, mock_GameL
     assert response.status_code == 500
     assert response.json() == {'detail': 'An error occurred while starting the game'}
 
-# Is game started test
+# Ver si el juego ha empezado tests
 @patch('app.LobbyRepository')
 def test_is_game_started__game_started(mock_LobbyRepository):
     mock_repository_lobby = MagicMock()
@@ -544,7 +544,7 @@ def test_is_game_started__error(mock_LobbyRepository):
     assert response.status_code == 500
     assert response.json() == {'detail': 'An error occurred while checking if the game is started'}
 
-# Get User Positions tests
+# Obtener posición de los usuarios tests
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
 @patch('app.GameRepository')

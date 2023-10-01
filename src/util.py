@@ -27,11 +27,13 @@ class GameLogic:
             position_repo.create_position(user, num_order, game)
             num_order += 1
 
-    @db_session
+    @db_session #! Revisar acoplamiento y cohesion en el if
     def next_turn(self, game: Game):
-        amount_players = game.amount_players
-        actual_turn = game.turn
-        position_number = actual_turn.number
+        game_repo = GameRepository()
+        position_repo = PositionRepository()
+        amount_players = game_repo.get_amount_players(game)
+        actual_turn = game_repo.get_turn(game)
+        position_number = position_repo.get_number(actual_turn)
         
         if(position_number != amount_players):
             new_turn = Position.select(number=(position_number+1))
@@ -42,23 +44,16 @@ class GameLogic:
 
     @db_session
     def play_card(self, user_name: str, id_card: int, lobby_name: str):
-        user = User.get(name=user_name)
-        lobby = Lobby.get(name=lobby_name)
+        user_repo = UserRepository()
+        lobby_repo = LobbyRepository()
         card_repo = CardRepository()
+        user = user_repo.get_user(user_name)
+        game = lobby_repo.get_game(lobby_name)
         card_repo.discard_card_from_hand(user, id_card)
-        self.next_turn(lobby.game)
-
-    @db_session
-    def is_user_turn(self, lobby_name: str, user_name: str) -> dict:
-        lobby = Lobby.get(name=lobby_name)
-        game = lobby.game
-        actual_turn = game.turn
-        bool_result = True if (actual_turn.user.name == user_name) else False
-        return {'is_my_turn': bool_result}
+        self.next_turn(game)
 
     @db_session
     def assign_turn(self, game: Game, num: int):
-        position_repo = PositionRepository()
-        pos_n = position_repo.get_n_position(num, game)
         game_repo = GameRepository()
+        pos_n = game_repo.get_n_position(game, num)
         game_repo.assign_turn(pos_n, game)

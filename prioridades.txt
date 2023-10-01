@@ -1,2 +1,5 @@
-1) Ver tema de diccionarios
-2) Terminar test de los endpoints
+1) Revisar endpoints y repositories
+2) Terminar tests
+3) Revisar que no se rompio nada
+4) Actualizar excel
+5) Consultar con los del front como quieren que le devolvamos la informacion (diccionarios)
