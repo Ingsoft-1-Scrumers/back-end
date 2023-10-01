@@ -115,12 +115,11 @@ class LobbyRepository:
         users_dict = [{'name': user.name} for user in lobby.users]
         users_dict.append({'host': lobby.host.name})
         return users_dict
-    
+
     @db_session
-    def get_lobby_set_users(self, lobby_name: str):
+    def get_lobby_set_users(self, lobby_name: str) -> Set(User):
         lobby = Lobby.get(name=lobby_name)
         return lobby.users
-
 
 class GameRepository:
 
@@ -144,7 +143,7 @@ class GameRepository:
     @db_session
     def get_users_positions(self, game: Game) -> dict:
         positions = game.positions
-        users = [{'name': position.user.name, 'position': position.id} for position in positions]
+        users = [{'name': position.user.name, 'position': position.number} for position in positions]
         return users
 
 
@@ -248,13 +247,19 @@ class CardRepository:
 class PositionRepository:
 
     @db_session
-    def create_position(self, user: User, game: Game):
-        Position(user=user, game=game)
+    def create_position(self, user: User, number: int, game: Game):
+        Position(user=user, number=number, game=game)
 
     @db_session
     def get_position(self, user: User) -> dict:
         position = Position.get(user=user)
         if position is None:
             raise ValueError("Position does not exist")
-        return {'username': user.name, 'position': position.id}
-    
+        return {'username': user.name, 'position': position.number}
+
+    @db_session
+    def get_n_position(self, n: int, game: Game) -> Position:
+        game_repo = GameRepository()
+        positions = game_repo.get_all_positions(game)
+        pos = positions.select().where(number=n).first()
+        return pos

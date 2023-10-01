@@ -21,8 +21,8 @@ class Lobby(db.Entity):
     game = Optional('Game')
     
 class Position(db.Entity):
-    id = PrimaryKey(int, auto=True)
-    user = Required(User)
+    user = PrimaryKey(User)
+    number = Required(int)
     game = Required('Game', reverse='positions')
     turn = Optional('Game', reverse='turn')
 

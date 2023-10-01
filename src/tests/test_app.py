@@ -337,20 +337,26 @@ def test_get_lobby_users__error(mock_UserRepository, mock_LobbyRepository):
     assert response.status_code == 500
     assert response.json() == {'detail': 'An error occurred while getting the lobby users'}
 
-# Start game tests
-''' Work in progress
-@patch('app.GameRepository')
+
 @patch('app.LobbyRepository')
-def test_start_game(mock_LobbyRepository, mock_GameRepository):
-    mock_repository = MagicMock()
-    mock_repository.create_Game.return_value = "Game started successfully"
-    mock_GameRepository.return_value = mock_repository
+@patch('app.UserRepository')
+@patch('app.GameLogic')
+def test_start_game(mock_LobbyRepository, mock_UserRepository, mock_GameLogic):
+    mock_repository_user = MagicMock()
+    mock_repository_lobby = MagicMock()
+    mock_repository_gl = MagicMock()
 
-    mock_repository = MagicMock()
-    mock_repository.amount_players.return_value = 4
-    mock_LobbyRepository.return_value = mock_repository
+    mock_repository_user.user_exists.return_value = True
+    mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_user.is_user_in_lobby.return_value = True
+    mock_repository_lobby.can_start_game.return_value = True
+    mock_repository_user.is_user_host.return_value = True
+    mock_repository_gl.start_game.return_value = {'message': 'Game started successfully'}
 
-    response = client.post("/start_game/?game_name=Game1")
+    mock_UserRepository.return_value = mock_repository_user
+    mock_LobbyRepository.return_value = mock_repository_lobby
+    mock_GameLogic.return_value = mock_repository_gl
+
+    response = client.post('/start_game/?lobby_name=Lobby1&host_name=User1')
     assert response.status_code == 200
     assert response.json() == {'message': 'Game started successfully'}
-'''
