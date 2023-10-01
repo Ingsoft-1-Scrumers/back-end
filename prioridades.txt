@@ -1,6 +1,2 @@
-1) Solucionar creacion de posiciones
-2) Escribir todos los endpoints para que los del front puedan obtener la info necesaria
-3) Probar que ande el inicio de partida
-4) Realizar unit tests para todos los nuevos endpoints (Les recomiendo copilot)
-5) Limpiar/Organizar metodos de repository
-6) Empezar con robar carta
+1) Ver tema de diccionarios
+2) Terminar test de los endpoints

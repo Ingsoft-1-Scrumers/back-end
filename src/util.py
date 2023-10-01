@@ -28,7 +28,7 @@ class GameLogic:
         for user in users:
             num = list_pos.pop()
             position_repo.create_position(user, num, game)
-
+            
     @db_session
     def assign_positions(self, users: Set(User), game: Game):
         position_repo = PositionRepository()
@@ -38,8 +38,29 @@ class GameLogic:
             num_order += 1
 
     @db_session
-    def assign_turn(self, game: Game):
+    def next_turn(self, game: Game):
+        amount_players = game.amount_players
+        actual_turn = game.turn
+        position_number = actual_turn.number
+        
+        if(position_number != amount_players):
+            new_turn = Position.select(number=(position_number+1))
+            game.turn = new_turn.first()
+        else:
+            new_turn = Position.select(number=1)
+            game.turn = new_turn.first()
+
+    @db_session
+    def play_card(self, user_name: str, card: Card, lobby_name: str):
+        user = User.get(name=user_name)
+        lobby = Lobby.get(name=lobby_name)
+        card_repo = CardRepository()
+        card_repo.discard_card_from_hand(user, card)
+        self.next_turn(lobby.game)
+
+    @db_session
+    def assign_turn(self, game: Game, num: int):
         position_repo = PositionRepository()
-        pos_1 = position_repo.get_n_position(1, game)
+        pos_n = position_repo.get_n_position(num, game)
         game_repo = GameRepository()
-        game_repo.assign_turn(pos_1, game)
+        game_repo.assign_turn(pos_n, game)

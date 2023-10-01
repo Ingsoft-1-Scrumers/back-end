@@ -1,4 +1,5 @@
 from models import *
+import json
 from pony.orm import db_session
 from settings import CARDS_PER_USER
 from template import ALL_TEMPLATES
@@ -149,11 +150,19 @@ class GameRepository:
         game.turn = position
 
     @db_session
-    def get_users_positions(self, game: Game) -> dict:
+    def get_users_position(self, game: Game) -> dict:
         positions = game.positions
         users = [{'name': position.user.name, 'position': position.number} for position in positions]
+        json.dumps(users)
         return users
 
+    @db_session
+    def is_user_turn(self, lobby_name: str, user_name: str) -> dict:
+        lobby = Lobby.get(name=lobby_name)
+        game = lobby.game
+        actual_turn = game.turn
+        bool_result = True if (actual_turn.user.name == user_name) else False
+        return {'is_my_turn': bool_result}
 
 
 class CardRepository:
@@ -257,7 +266,8 @@ class PositionRepository:
         position = Position.get(user=user)
         if position is None:
             raise ValueError("Position does not exist")
-        return {'username': user.name, 'position': position.number}
+        return {'name': user.name, 'position': position.number}
+
 
     @db_session
     def get_n_position(self, n: int, game: Game) -> Position:
