@@ -1,5 +1,5 @@
-1) Realizar Endpoints restantes: Finalizar Partida, Jugar Lanzallamas y demas endpoints
-2) Hacer Unit Tests y Integration Tests
-3) Ver si los diccionarios que devolvamos estan bien hechos
-4) Revisar acoplamiento y cohesion de los modulos
-5) Ayudar a los del front con cualquier consulta que tengan
+1) Endpoint Lanzallamas (Logica Eliminar Jugador y Finalizar Partida)
+2) Continuar Unit Testing y Integration Testing
+3) Revisar codigo en general
+4) Realizar end to end Tests
+5) Ayudar a nuestros amigos del front

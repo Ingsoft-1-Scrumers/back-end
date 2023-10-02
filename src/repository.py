@@ -3,6 +3,8 @@ from pony.orm import db_session
 from settings import CARDS_PER_USER
 from template import ALL_TEMPLATES
 
+#! Convencion: Si ya tenemos un objeto, podemos acceder a sus atributos sin usar una clase repository
+
 class UserRepository:
 
     @db_session
@@ -15,20 +17,27 @@ class UserRepository:
         if user is None:
             raise ValueError("User does not exist with name: {}".format(user_name))
         return user
+    
+    @db_session
+    def get_hand(self, user_name: str) -> Set(Card):
+        user = self.get_user(user_name)
+        hand = user.hand
+        if hand is None:
+            raise ValueError("User does not have a hand")
+        return hand
 
-    @db_session #! Diccionario
-    def get_user_hand(self, user_name: str) -> dict:
-        user = User.select(name=user_name)
+    @db_session
+    def get_user_hand(self, user_name: str) -> [dict]:
+        hand = self.get_hand(user_name)
         hand_dict = [{'id': card.id,
                     'name': card.name, 
-                      'type': card.type, 
-                      'description': card.description} for card in user.first().hand]
+                    'type': card.type} for card in hand]
         return hand_dict
 
     @db_session
     def get_total_cards(self, user_name: str) -> int:
-        user = User.select(name=user_name)
-        return len(user.first().hand)
+        hand = self.get_hand(user_name)
+        return len(hand)
 
     @db_session
     def user_exists(self, user_name: str) -> bool:
@@ -36,76 +45,68 @@ class UserRepository:
     
     @db_session
     def is_user_in_a_lobby(self, user_name: str) -> bool:
-        user = User.get(name=user_name)
+        user = self.get_user(user_name)
         return user.lobby is not None
     
     @db_session
-    def is_target_in_a_lobby(self, target_name: str) -> bool:
-        target = User.get(name=target_name)
+    def is_target_in_a_lobby(self, target_user_name: str) -> bool:
+        target = self.get_user(target_user_name)
         return target.lobby is not None
 
-    @db_session #! Revisar si se puede hacer mejor
+    @db_session 
     def is_user_in_lobby(self, lobby_name: str, user_name: str) -> bool:
         lobby_repo = LobbyRepository()
-        lobby = lobby_repo.get_lobby(lobby_name)
-        users_dict = [{'name': user.name} for user in lobby.users]
-        result = False
-        for user in users_dict:
-            if user['name'] == user_name:
-                result = True
-                break
-        return result
+        lobby_users = lobby_repo.get_lobby_set_users(lobby_name)
+        return lobby_users.select().where(name=user_name).exists()
     
-    @db_session
-    def is_target_in_lobby(self, lobby_name: str, target_name: str) -> bool:
+    @db_session 
+    def is_target_in_lobby(self, lobby_name: str, target_user_name: str) -> bool:
         lobby_repo = LobbyRepository()
-        lobby = lobby_repo.get_lobby(lobby_name)
-        users_dict = [{'name': user.name} for user in lobby.users]
-        result = False
-        for user in users_dict:
-            if user['name'] == target_name:
-                result = True
-                break
-        return result
+        lobby_users = lobby_repo.get_lobby_set_users(lobby_name)
+        return lobby_users.select().where(name=target_user_name).exists()
     
     @db_session
     def is_user_alive(self, user_name: str) -> bool:
-        user = User.get(name=user_name)
+        user = self.get_user(user_name)
         return user.is_alive
     
     @db_session
-    def is_target_alive(self, target_name: str) -> bool:
-        target = User.get(name=target_name)
+    def is_target_alive(self, target_user_name: str) -> bool:
+        target = self.get_user(target_user_name)
         return target.is_alive
     
     @db_session
     def is_user_host(self, lobby_name: str, user_name: str) -> bool:
         lobby_repo = LobbyRepository()
-        host = lobby_repo.get_host_name(lobby_name)
-        return host == user_name
+        host_name = lobby_repo.get_host_name(lobby_name)
+        return host_name == user_name
 
     @db_session
     def is_user_turn(self, lobby_name: str, user_name: str) -> bool:
-        lobby_repo = LobbyRepository()
         game_repo = GameRepository()
-        position_repo = PositionRepository()
-        game = lobby_repo.get_game(lobby_name)
-        position = game_repo.get_turn(game)
-        turn = position_repo.get_user(position)
-        return turn.name == user_name
+        game_turn_position = game_repo.get_turn(lobby_name)
+        user_turn = game_turn_position.user
+        return user_turn.name == user_name
 
     @db_session
     def check_user_has_card(self, user_name: str, card_id: int) -> bool:
-        card_repo = CardRepository()
-        user = User.select(name=user_name)
-        hand = user.first().hand
+        hand = self.get_hand(user_name)
         result = False
         for card in hand:
-            card_id_hand = card_repo.get_card_id(card)
-            if  card_id_hand == card_id:
+            if card.id == card_id:
                 result = True
                 break
         return result
+    
+    @db_session
+    def get_user_game(self, user_name: str) -> Game:
+        lobby_repo = LobbyRepository()
+        user = self.get_user(user_name)
+        lobby = user.lobby
+        if lobby is None:
+            raise ValueError("User does not have a lobby")
+        game = lobby_repo.get_game(lobby.name)
+        return game
 
 class LobbyRepository:
 
@@ -115,8 +116,8 @@ class LobbyRepository:
         host = user_repo.get_user(host_name)
         if (password == ''):
             password = None   
-        lobby = Lobby(name=lobby_name, min_players=min_players, max_players=max_players, password=password, host=host)
-        lobby.users.add(host)
+        Lobby(name=lobby_name, min_players=min_players, max_players=max_players, password=password, host=host)
+        self.add_user_to_lobby(lobby_name, host_name)
 
     @db_session
     def get_lobby(self, lobby_name: str) -> Lobby:
@@ -127,7 +128,7 @@ class LobbyRepository:
     
     @db_session
     def get_game(self, lobby_name: str) -> Game:
-        lobby = Lobby.get(name=lobby_name)
+        lobby = self.get_lobby(lobby_name)
         game = lobby.game
         if game is None:
             raise ValueError("Game does not exist with name: {}".format(lobby_name))
@@ -135,29 +136,49 @@ class LobbyRepository:
     
     @db_session
     def get_lobby_set_users(self, lobby_name: str) -> Set(User):
-        lobby = Lobby.get(name=lobby_name)
+        lobby = self.get_lobby(lobby_name)
         return lobby.users
 
     @db_session
+    def get_min_players(self, lobby_name: str) -> int:
+        lobby = self.get_lobby(lobby_name)
+        return lobby.min_players
+    
+    @db_session
+    def get_max_players(self, lobby_name: str) -> int:
+        lobby = self.get_lobby(lobby_name)
+        return lobby.max_players
+
+    @db_session
+    def get_password(self, lobby_name: str) -> str:
+        lobby = self.get_lobby(lobby_name)
+        return lobby.password
+
+    @db_session
     def get_host_name(self, lobby_name: str) -> str:
-        lobby = Lobby.get(name=lobby_name)
+        lobby = self.get_lobby(lobby_name)
         return lobby.host.name
 
     @db_session
     def get_amount_users(self, lobby_name: str) -> int:
-        lobby = Lobby.get(name=lobby_name)
+        lobby = self.get_lobby(lobby_name)
         return len(lobby.users)
 
-    @db_session #! Diccionario
-    def get_lobby_users(self, lobby_name: str) -> dict:
-        lobby = Lobby.get(name=lobby_name)
-        users_dict = [{'name': user.name} for user in lobby.users]
-        users_dict.append({'host': lobby.host.name})
+    @db_session 
+    def get_lobby_users(self, lobby_name: str) -> [dict]:
+        lobby_users = self.get_lobby_set_users(lobby_name)
+        i = 1
+        users_dict = []
+        for user in lobby_users:
+            key = 'user' + str(i)
+            users_dict.append({key: user.name})
+            i += 1
+        users_dict.append({'host': self.get_host_name(lobby_name)})
         return users_dict
-
+    
     @db_session
     def is_game_started(self, lobby_name: str) -> bool:
-        lobby = Lobby.get(name=lobby_name)
+        lobby = self.get_lobby(lobby_name)
         return lobby.game is not None
 
     @db_session 
@@ -166,179 +187,117 @@ class LobbyRepository:
     
     @db_session
     def is_lobby_full(self, lobby_name: str) -> bool:
-        lobby = Lobby.get(name=lobby_name)
-        return len(lobby.users) == lobby.max_players
+        max_players = self.get_max_players(lobby_name)
+        lobby_users = self.get_lobby_set_users(lobby_name)
+        return len(lobby_users) == max_players
     
     @db_session
     def can_start_game(self, lobby_name: str) -> bool:
-        lobby = Lobby.get(name=lobby_name)
-        return len(lobby.users) >= lobby.min_players
+        min_players = self.get_min_players(lobby_name)
+        lobby_users = self.get_lobby_set_users(lobby_name)
+        return len(lobby_users) >= min_players
     
     @db_session
     def is_password_correct(self, lobby_name: str, password: str) -> bool:
-        lobby = Lobby.get(name=lobby_name)
-        if lobby.password is None:
+        lobby_password = self.get_password(lobby_name)
+        if lobby_password is None:
             result = True
         else:
-            result = lobby.password == password
+            result = lobby_password == password
         return result
 
     @db_session
-    def add_user_to_lobby(self, lobby_name: str, user_name : str):
+    def add_user_to_lobby(self, lobby_name: str, user_name: str):
         user_repo = UserRepository()
         user = user_repo.get_user(user_name)
-        lobby = Lobby.get(name=lobby_name)
-        lobby.users.add(user)
+        lobby_users = self.get_lobby_set_users(lobby_name)
+        lobby_users.add(user)
+
+    @db_session
+    def remove_all_users_from_lobby(self, lobby_name: str):
+        lobby_users = self.get_lobby_set_users(lobby_name)
+        for user in lobby_users:
+            user.lobby = None
+
+    @db_session
+    def remove_lobby(self, lobby_name: str):
+        lobby = self.get_lobby(lobby_name)
+        lobby.delete()
 
 class GameRepository:
 
     @db_session
-    def create_game(self, lobby : Lobby, amount_players : int):
-        Game(lobby=lobby, amount_players=amount_players)
+    def create_game(self, lobby_name: str, amount_players: int):
+        lobby_repo = LobbyRepository()
+        lobby = lobby_repo.get_lobby(lobby_name)
+        Game(lobby=lobby, name=lobby_name, amount_players=amount_players)
 
     @db_session
-    def get_all_positions(self, game: Game) -> Set(Position):
+    def get_game(self, game_name: str) -> Game:
+        game = Game.get(name=game_name)
+        if game is None:
+            raise ValueError("Game does not exist with name: {}".format(game_name))
+        return game 
+
+    @db_session
+    def get_all_cards(self, game_name: str) -> Set(Card):
+        game = self.get_game(game_name)
+        return game.all_cards
+
+    @db_session
+    def get_all_positions(self, game_name: str) -> Set(Position):
+        game = self.get_game(game_name)
         return game.positions
     
     @db_session
-    def get_turn(self, game: Game) -> Position:
+    def get_turn(self, game_name: str) -> Position:
+        game = self.get_game(game_name)
         return game.turn
     
     @db_session
-    def get_amount_players(self, game: Game) -> int:
+    def get_amount_players(self, game_name: str) -> int:
+        game = self.get_game(game_name)
         return game.amount_players
     
     @db_session
-    def get_n_position(self, n: int, game: Game) -> Position:
-        positions = self.get_all_positions(game)
-        n_position = positions.select().where(number=n).first()
+    def get_n_position(self, n: int, game_name: str) -> Position:
+        game_positions = self.get_all_positions(game_name) 
+        n_position = game_positions.select().where(number=n).first() # Query
         return n_position
 
-    @db_session #! Diccionario
-    def get_users_position(self, lobby_name: str) -> dict:
-        lobby_repo = LobbyRepository()
-        game = lobby_repo.get_game(lobby_name)
-        positions = self.get_all_positions(game)
-        users = [{'name': position.user.name, 'position': position.number} for position in positions]
-        return users
+    @db_session
+    def get_users_position(self, game_name: str) -> [dict]:
+        positions = self.get_all_positions(game_name)
+        users_dict = [{'name': position.user.name, 'position': position.number} for position in positions]
+        return users_dict
     
     @db_session
-    def assign_turn(self, position: Position, game: Game):
+    def assign_turn(self, position: Position, game_name: str):
+        game = self.get_game(game_name)
         game.turn = position
+
+    @db_session
+    def remove_game(self, game_name: str):
+        game = self.get_game(game_name)
+        game.delete()
     
-class CardRepository: #! Revisar acoplamiento y cohesion en todos los metodos
+class CardRepository:
 
     @db_session
-    def create_deck(self, game : Game):
-        self.create_cards_for_this_game(game)
-        self.add_cards_to_deck(game)
-
-    @db_session
-    def get_card_id(self, card: Card) -> int:
-        return card.id
-        
-    @db_session
-    def deal_cards_all_users(self, lobby_name: str):
-        lobby_repo = LobbyRepository()
-        game = lobby_repo.get_game(lobby_name)
-        users = lobby_repo.get_lobby_set_users(lobby_name)
-        for user in users:
-            self.deal_4_cards_user(user, game) 
-
-    @db_session
-    def steal_card_from_deck(self, user_name : str) -> dict:
-        user = User.get(name=user_name)
-        lobby = user.lobby
-        game = lobby.game
-        random_card = self.random_card_from_deck(game)
-        random_card.user_hand = user
-        card_dict = {'id': random_card.id,
-                    'name': random_card.name, 
-                      'type': random_card.type, 
-                      'description': random_card.description}
-        return card_dict  
-
-    @db_session 
-    def discard_card_from_hand(self, this_user : User, id_card : int):
-        card_discard = Card.get(id=id_card)
-        hand_to_modify = this_user.hand
-        hand_to_modify.remove(card_discard)
-
-    # Submetodos para repartir/robar cartas
-    #########################################
-    @db_session 
-    def deal_4_cards_user(self, user : User, game : Game):
-        for number_card in range(CARDS_PER_USER):
-            random_card = self.random_card_from_deck_ingoring_panic(game)
-            random_card.user_hand = user
-        
-    @db_session
-    def random_card_from_deck_ingoring_panic(self, game : Game) -> Card:
-        deck_without_panic = game.deck_cards.select(lambda card: card.type != "Panico")
-        random_card = deck_without_panic.random(1)[0] #saco una carta del mazo
-        self.remove_card_from_deck(random_card) #elimino la carta del mazo
-        return random_card
-
-    @db_session
-    def remove_card_from_deck(self, card_discard : Card):
-        game = card_discard.game_associated
-        game.deck_cards.remove(card_discard)
-    
-    @db_session
-    def random_card_from_deck(self, this_game : Game) -> Card:
-        random_card = this_game.deck_cards.random(1)[0] #saco una carta del mazo
-        self.remove_card_from_deck(random_card) #elimino la carta del mazo
-        return random_card
-         
-    @db_session
-    def recreate_empty_deck(self, this_game : Game):
-        new_deck = this_game.all_cards.select(lambda card: card.user_hand == None)
-        for card in new_deck:
-            card.game_deck = this_game
-
-    # Submetodos para crear el mazo
-    #########################################
-    @db_session
-    def create_cards_for_this_game(self, game : Game):
-        for template_name in ALL_TEMPLATES: 
-            amount_cards_template = template_name['quantity_numb_players'][game.amount_players - 4]
-            for cards in range(amount_cards_template):
-                self.create_card(template_name, game)
-
-    @db_session
-    def create_card(self, card_template, game_associated : Game):
+    def create_card(self, card_template, game : Game):
         Card(name = card_template["card_name"], 
             type = card_template["card_type"],
-            description = card_template["description"],
-            game_associated = game_associated)
-    
-    @db_session
-    def add_cards_to_deck(self, game : Game):
-        for card_created in Card.select(game_associated = game):
-            self.put_card_in_deck(card_created, game)
+            game_associated = game)
 
     @db_session
-    def put_card_in_deck(self, card : Card, game_deck : Game):
-        card.game_deck = game_deck
-    ######################################### 
+    def get_card(self, card_id: int) -> Card:
+        card = Card.get(id=card_id)
+        if card is None:
+            raise ValueError("Card does not exist")
+        return card
 
 class PositionRepository:
 
     @db_session
     def create_position(self, user: User, number: int, game: Game):
         Position(user=user, number=number, game=game)
-
-    @db_session
-    def get_user(self, position: Position) -> User:
-        return position.user
-    
-    @db_session
-    def get_number(self, position: Position) -> int:
-        return position.number
-
-    @db_session
-    def get_position(self, user: User) -> dict:
-        position = Position.get(user=user)
-        if position is None:
-            raise ValueError("Position does not exist")
-        return {'name': user.name, 'position': position.number}
