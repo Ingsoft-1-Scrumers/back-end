@@ -35,7 +35,7 @@ class Game(db.Entity):
     deck_cards = Set('Card', reverse='game_deck')
 
 class Card(db.Entity):
-    id = PrimaryKey(int, auto=True)
+    id = PrimaryKey(int, auto=True) #! Deberiamos agregar un atributo para identificar la carta dentro del juego
     name = Required(str)
     type = Required(str)
     description = Required(str)

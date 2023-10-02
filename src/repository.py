@@ -39,6 +39,11 @@ class UserRepository:
         user = User.get(name=user_name)
         return user.lobby is not None
     
+    @db_session
+    def is_target_in_a_lobby(self, target_name: str) -> bool:
+        target = User.get(name=target_name)
+        return target.lobby is not None
+
     @db_session #! Revisar si se puede hacer mejor
     def is_user_in_lobby(self, lobby_name: str, user_name: str) -> bool:
         lobby_repo = LobbyRepository()
@@ -50,6 +55,28 @@ class UserRepository:
                 result = True
                 break
         return result
+    
+    @db_session
+    def is_target_in_lobby(self, lobby_name: str, target_name: str) -> bool:
+        lobby_repo = LobbyRepository()
+        lobby = lobby_repo.get_lobby(lobby_name)
+        users_dict = [{'name': user.name} for user in lobby.users]
+        result = False
+        for user in users_dict:
+            if user['name'] == target_name:
+                result = True
+                break
+        return result
+    
+    @db_session
+    def is_user_alive(self, user_name: str) -> bool:
+        user = User.get(name=user_name)
+        return user.is_alive
+    
+    @db_session
+    def is_target_alive(self, target_name: str) -> bool:
+        target = User.get(name=target_name)
+        return target.is_alive
     
     @db_session
     def is_user_host(self, lobby_name: str, user_name: str) -> bool:
@@ -145,7 +172,7 @@ class LobbyRepository:
     @db_session
     def can_start_game(self, lobby_name: str) -> bool:
         lobby = Lobby.get(name=lobby_name)
-        return len(lobby.users) >= lobby.min_players and self.is_game_started(lobby_name) == False
+        return len(lobby.users) >= lobby.min_players
     
     @db_session
     def is_password_correct(self, lobby_name: str, password: str) -> bool:

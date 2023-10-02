@@ -1,5 +1,5 @@
-1) Revisar endpoints y repositories
-2) Terminar tests
-3) Revisar que no se rompio nada
-4) Actualizar excel
-5) Consultar con los del front como quieren que le devolvamos la informacion (diccionarios)
+1) Realizar Endpoints restantes: Finalizar Partida, Jugar Lanzallamas y demas endpoints
+2) Hacer Unit Tests y Integration Tests
+3) Ver si los diccionarios que devolvamos estan bien hechos
+4) Revisar acoplamiento y cohesion de los modulos
+5) Ayudar a los del front con cualquier consulta que tengan
