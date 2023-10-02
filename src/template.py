@@ -140,7 +140,7 @@ Uno_dos = {
 
 Tres_cuatro = {
     "card_name" : "Tres, cuatro",
-    "card_type" : "Panico",,
+    "card_type" : "Panico",
     "quantity_numb_players" : [1, 1, 1, 1, 1, 2, 2, 2, 2]
 }
 

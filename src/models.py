@@ -17,17 +17,17 @@ class Lobby(db.Entity):
     max_players = Required(int, size=8)
     password = Optional(str)
     users = Set(User, reverse='lobby')
-    host = Required(User, reverse='hosting_lobby', cascade_delete=True)
+    host = Required(User, reverse='hosting_lobby')
     game = Optional('Game', cascade_delete=True)
     
 class Game(db.Entity):
     lobby = PrimaryKey(Lobby)
     name = Required(str)
     amount_players = Required(int, size=8, unsigned=True)
-    turn = Optional('Position', reverse='turn', cascade_delete=True)
-    positions = Set('Position', reverse='game', cascade_delete=True)
-    all_cards = Set('Card', reverse='game_associated', cascade_delete=True)
-    deck_cards = Set('Card', reverse='game_deck', cascade_delete=True)
+    turn = Optional('Position', reverse='turn')
+    positions = Set('Position', reverse='game')
+    all_cards = Set('Card', reverse='game_associated')
+    deck_cards = Set('Card', reverse='game_deck')
 
 class Position(db.Entity):
     user = PrimaryKey(User)
