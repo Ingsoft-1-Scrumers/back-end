@@ -55,5 +55,5 @@ class GameLogic:
     @db_session
     def assign_turn(self, game: Game, num: int):
         game_repo = GameRepository()
-        pos_n = game_repo.get_n_position(game, num)
+        pos_n = game_repo.get_n_position(num, game)
         game_repo.assign_turn(pos_n, game)

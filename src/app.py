@@ -170,7 +170,7 @@ async def get_users_position(lobby_name: str, user_name: str):
         raise HTTPException(status_code=500, detail='An error occurred while getting the users position')
     
 @app.get('/get_user_hand/{user_name}') #! Testing necesario
-async def get_user_hand(user_name: str, lobby_name: str):
+async def get_user_hand(lobby_name: str, user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()  
 
@@ -193,7 +193,7 @@ async def get_user_hand(user_name: str, lobby_name: str):
         raise HTTPException(status_code=500, detail='An error occurred while getting the hand')
 
 @app.get('/steal_card_from_deck/{lobby_name}') #! Testing necesario
-async def steal_card_from_deck(user_name: str, lobby_name: str):
+async def steal_card_from_deck(lobby_name: str, user_name: str):
     card_repo = CardRepository()
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
@@ -225,7 +225,7 @@ async def steal_card_from_deck(user_name: str, lobby_name: str):
         raise HTTPException(status_code=500, detail='An error occurred while stealing a card')
 
 @app.get('/is_my_turn/{user_name}') #! Testing necesario
-async def is_my_turn(user_name: str, lobby_name: str):
+async def is_my_turn(lobby_name: str, user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
 
