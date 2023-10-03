@@ -4,6 +4,7 @@ from template import ALL_TEMPLATES
 
 from models import User
 from repository import *
+from util import *
 
 @pytest.fixture
 def user_repository():
@@ -24,6 +25,10 @@ def card_repository():
 @pytest.fixture
 def position_repository():
     return PositionRepository()
+
+@pytest.fixture
+def game_logic():
+    return GameLogic()
 
 """
 Prueba de integracion:
@@ -218,3 +223,25 @@ def test_create_position(position_repository: PositionRepository):
     with db_session:
         assert count(Position.select()) == N_positions + 1
 
+
+@pytest.mark.integration_test
+def test_start_and_end_game(game_logic: GameLogic):
+    
+    with db_session:
+        N_lobby = count(Lobby.select())
+
+    game_logic.start_game("1234_lobby")
+    with db_session:
+        N_game = count(Game.select())
+        N_cards = count(Card.select())
+        N_positions = count(Position.select())
+        assert N_cards > 0
+        assert N_positions > 0
+
+    game_logic.end_game("1234_lobby")
+    
+    with db_session:
+        assert count(Game.select()) == N_game - 1
+        assert count(Lobby.select()) == N_lobby - 1
+        assert count(Card.select()) == N_cards - 35
+        assert count(Position.select()) == N_positions - 4
