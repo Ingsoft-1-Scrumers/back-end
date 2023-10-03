@@ -110,12 +110,10 @@ class UserRepository:
 
 class LobbyRepository:
 
-    @db_session
+    @db_session #! No hay lobbies sin contraseña
     def create_lobby(self, lobby_name: str, min_players: int, max_players: int, password: str, host_name: str):
         user_repo = UserRepository()
         host = user_repo.get_user(host_name)
-        if (password == 'empty'):
-            password = None   
         Lobby(name=lobby_name, min_players=min_players, max_players=max_players, password=password, host=host)
         self.add_user_to_lobby(lobby_name, host_name)
 
@@ -195,11 +193,7 @@ class LobbyRepository:
     @db_session
     def is_password_correct(self, lobby_name: str, password: str) -> bool:
         lobby_password = self.get_password(lobby_name)
-        if lobby_password is None:
-            result = True
-        else:
-            result = lobby_password == password
-        return result
+        return lobby_password == password
 
     @db_session
     def add_user_to_lobby(self, lobby_name: str, user_name: str):
