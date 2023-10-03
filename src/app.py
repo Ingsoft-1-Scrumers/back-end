@@ -122,6 +122,18 @@ async def start_game(lobby_name: str, host_name: str):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while starting the game')
 
+@app.get('/is_lobby_exist/{lobby_name}')
+async def is_lobby_exist(lobby_name: str):
+    lobby_repo = LobbyRepository()
+    
+    try:
+        result = lobby_repo.lobby_exists(lobby_name)
+        return {'exist': result}
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while checking if lobby exist')
+    
+
 # Endpoints para obtener información del juego
 @app.get('/is_game_started/{lobby_name}')
 async def is_game_started(lobby_name: str):
