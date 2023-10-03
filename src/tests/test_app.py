@@ -28,36 +28,31 @@ def user_hand():
   {
     "id": 4,
     "name": "Infectado",
-    "type": "Contagio",
-    "description": "Si recibes esta carta de otro jugador, quedas Infectadoy debes quedarte esta carta hasta el final de la partida"
+    "type": "Contagio"
   },
   {
     "id": 25,
     "name": "Seduccion",
-    "type": "Accion",
-    "description": "."
+    "type": "Accion"
   },
   {
     "id": 3,
     "name": "Infectado",
-    "type": "Contagio",
-    "description": "Si recibes esta carta de otro jugador, quedas Infectadoy debes quedarte esta carta hasta el final de la partida"
+    "type": "Contagio"
   },
   {
     "id": 5,
     "name": "Infectado",
-    "type": "Contagio",
-    "description": "Si recibes esta carta de otro jugador, quedas Infectadoy debes quedarte esta carta hasta el final de la partida"
+    "type": "Contagio"
   }
 ]
 
 @pytest.fixture
 def card():
     return {
-  "id": 4,
+  "id": 55,
   "name": "Infectado",
-  "type": "Contagio",
-  "description": "Si recibes esta carta de otro jugador, quedas Infectadoy debes quedarte esta carta hasta el final de la partida"
+  "type": "Contagio"
 }
 
 # Crear usuario tests
@@ -711,24 +706,24 @@ def test_get_user_hand__error(mock_UserRepository, mock_LobbyRepository):
     assert response.json() == {'detail': 'An error occurred while getting the hand'}
 
 # Robar carta tests
-@patch('app.CardRepository')
+@patch('app.GameLogic')
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
-def test_steal_card_from_deck(mock_UserRepository, mock_LobbyRepository, mock_CardRepository, card):
+def test_steal_card_from_deck(mock_UserRepository, mock_LobbyRepository, mock_GameLogic, card):
     mock_repository_user = MagicMock()
     mock_repository_lobby = MagicMock()
-    mock_repository_card = MagicMock()
+    mock_repository_game_logic = MagicMock()
 
     mock_repository_lobby.lobby_exists.return_value = True
     mock_repository_user.is_user_in_lobby.return_value = True
     mock_repository_lobby.is_game_started.return_value = True
     mock_repository_user.is_user_turn.return_value = True
     mock_repository_user.get_total_cards.return_value = 4
-    mock_repository_card.steal_card_from_deck.return_value = card
+    mock_repository_game_logic.steal_card_from_deck.return_value = card
 
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
-    mock_CardRepository.return_value = mock_repository_card
+    mock_GameLogic.return_value = mock_repository_game_logic
 
     response = client.get('/steal_card_from_deck/Lobby1?user_name=User1')
     assert response.status_code == 200
