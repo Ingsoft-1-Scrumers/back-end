@@ -1,5 +1,0 @@
-1) Endpoint Lanzallamas (Logica Eliminar Jugador y Finalizar Partida)
-2) Continuar Unit Testing y Integration Testing
-3) Revisar codigo en general
-4) Realizar end to end Tests
-5) Ayudar a nuestros amigos del front

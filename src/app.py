@@ -273,9 +273,6 @@ async def end_game(lobby_name: str, user_name: str):
     lobby_repo = LobbyRepository()
     game_logic = GameLogic()
     
-    if not (user_repo.user_exists(user_name)):
-        raise HTTPException(status_code=404, detail='This user does not exist')
-    
     if not (lobby_repo.lobby_exists(lobby_name)):
         raise HTTPException(status_code=404, detail='This lobby name does not exist')
     

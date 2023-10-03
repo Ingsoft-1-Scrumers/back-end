@@ -114,7 +114,7 @@ class LobbyRepository:
     def create_lobby(self, lobby_name: str, min_players: int, max_players: int, password: str, host_name: str):
         user_repo = UserRepository()
         host = user_repo.get_user(host_name)
-        if (password == ''):
+        if (password == 'empty'):
             password = None   
         Lobby(name=lobby_name, min_players=min_players, max_players=max_players, password=password, host=host)
         self.add_user_to_lobby(lobby_name, host_name)
@@ -167,12 +167,7 @@ class LobbyRepository:
     @db_session 
     def get_lobby_users(self, lobby_name: str) -> [dict]:
         lobby_users = self.get_lobby_set_users(lobby_name)
-        i = 1
-        users_dict = []
-        for user in lobby_users:
-            key = 'user' + str(i)
-            users_dict.append({key: user.name})
-            i += 1
+        users_dict = [{'name': user.name} for user in lobby_users]
         users_dict.append({'host': self.get_host_name(lobby_name)})
         return users_dict
     

@@ -99,7 +99,7 @@ class GameLogic:
             card.game_deck = game
 
     @db_session
-    def play_card(self, user_name: str, id_card: int, lobby_name: str): #! Falta agregar el efecto y objetivo de la carta
+    def play_card(self, user_name: str, id_card: int, lobby_name: str):
         user_repo = UserRepository()
         user = user_repo.get_user(user_name)
         self.discard_card_from_hand(user, id_card)
