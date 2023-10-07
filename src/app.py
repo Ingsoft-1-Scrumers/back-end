@@ -1,4 +1,4 @@
-#probando branch
+#branch discard_card
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
