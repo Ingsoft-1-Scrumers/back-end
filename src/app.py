@@ -1,24 +1,36 @@
-#branch websockets
-
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from connection import ConnectionManager
 from repository import *
 from util import *
+from basemodels import *
 
 app = FastAPI()
-
-origins = ["http://localhost:5173"]
+manager = ConnectionManager()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+@app.websocket("/lobby_status/{lobby_name}")
+async def get_lobby_status(websocket: WebSocket, lobby_name: str):
+    lobby_repo = LobbyRepository()
+    await websocket.accept()
+    await manager.lobby_connect(websocket, lobby_name)
+    
+    while True:
+        test = await websocket.receive_text()
+        print(test)
+        data = lobby_repo.get_lobby_users(lobby_name)
+        await manager.broadcast_to_lobby(lobby_name, str(data))
+
 @app.post('/create_user/')
-async def create_user(user_name: str):
+async def create_user(new_user: CreateUserRequest):
+    user_name = new_user.user_name
     user_repo = UserRepository()
     
     if user_repo.user_exists(user_name):
@@ -32,7 +44,12 @@ async def create_user(user_name: str):
         raise HTTPException(status_code=500, detail='An error occurred while creating the user')
 
 @app.post('/create_lobby/')
-async def create_lobby(lobby_name: str, min_players: int, max_players: int, password: str, host_name: str):
+async def create_lobby(new_lobby: CreateLobbyRequest):
+    lobby_name = new_lobby.lobby_name
+    min_players = new_lobby.min_players
+    max_players = new_lobby.max_players
+    password = new_lobby.password
+    host_name = new_lobby.host_name
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
 
@@ -53,7 +70,10 @@ async def create_lobby(lobby_name: str, min_players: int, max_players: int, pass
         raise HTTPException(status_code=500, detail='An error occurred while creating the lobby')
         
 @app.post('/join_lobby/')
-async def join_lobby(lobby_name: str, user_name: str, password: str):
+async def join_lobby(request: JoinLobbyRequest):
+    lobby_name = request.lobby_name
+    password = request.password
+    user_name = request.user_name
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
 
@@ -81,7 +101,8 @@ async def join_lobby(lobby_name: str, user_name: str, password: str):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while joining the lobby')
-    
+
+'''
 @app.get('/lobby_users/{lobby_name}')
 async def get_lobby_users(lobby_name: str, user_name: str):
     lobby_repo = LobbyRepository()
@@ -98,9 +119,12 @@ async def get_lobby_users(lobby_name: str, user_name: str):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the lobby users')
+'''
 
 @app.post('/start_game/')
-async def start_game(lobby_name: str, host_name: str):
+async def start_game(request: LobbyUserRequest):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
     game_logic = GameLogic()
@@ -111,7 +135,7 @@ async def start_game(lobby_name: str, host_name: str):
     if not (lobby_repo.can_start_game(lobby_name)):
         raise HTTPException(status_code=406, detail='This lobby does not have enough players')
     
-    if not (user_repo.is_user_host(lobby_name, host_name)):
+    if not (user_repo.is_user_host(lobby_name, user_name)):
         raise HTTPException(status_code=401, detail='This user is not the host of the lobby')
     
     if (lobby_repo.is_game_started(lobby_name)):
@@ -123,20 +147,9 @@ async def start_game(lobby_name: str, host_name: str):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while starting the game')
-
-@app.get('/is_lobby_exist/{lobby_name}')
-async def is_lobby_exist(lobby_name: str):
-    lobby_repo = LobbyRepository()
-    
-    try:
-        result = lobby_repo.lobby_exists(lobby_name)
-        return {'exist': result}
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail='An error occurred while checking if lobby exist')
-    
-
+ 
 # Endpoints para obtener información del juego
+#! VA EN WEB SOCKET
 @app.get('/is_game_started/{lobby_name}')
 async def is_game_started(lobby_name: str):
     lobby_repo = LobbyRepository()
@@ -151,8 +164,11 @@ async def is_game_started(lobby_name: str):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while checking if the game is started')
 
+#! VA EN WEB SOCKET
 @app.get('/get_users_position/{lobby_name}')
-async def get_users_position(lobby_name: str, user_name: str):
+async def get_users_position(request: LobbyUserRequest):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
     game_repo = GameRepository()
@@ -171,9 +187,11 @@ async def get_users_position(lobby_name: str, user_name: str):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the users position')
-    
+
 @app.get('/get_user_hand/{user_name}') 
-async def get_user_hand(lobby_name: str, user_name: str):
+async def get_user_hand(request: LobbyUserRequest):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()  
     
@@ -193,7 +211,9 @@ async def get_user_hand(lobby_name: str, user_name: str):
         raise HTTPException(status_code=500, detail='An error occurred while getting the hand')
 
 @app.get('/steal_card_from_deck/{lobby_name}') 
-async def steal_card_from_deck(lobby_name: str, user_name: str):
+async def steal_card_from_deck(request: LobbyUserRequest):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
     game_logic = GameLogic()
@@ -216,13 +236,16 @@ async def steal_card_from_deck(lobby_name: str, user_name: str):
         raise HTTPException(status_code=406, detail='This user already has 5 cards')
     
     try:
-        return game_logic.steal_card_from_deck(user_name) #! Esto deberia estar en el game_logic
+        return game_logic.steal_card_from_deck(user_name) 
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while stealing a card')
 
+#! VA EN WEB SOCKET
 @app.get('/is_my_turn/{user_name}')
-async def is_my_turn(lobby_name: str, user_name: str):
+async def is_my_turn(request: LobbyUserRequest):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
     
@@ -243,7 +266,11 @@ async def is_my_turn(lobby_name: str, user_name: str):
         raise HTTPException(status_code=500, detail='An error occurred while checking if it is the user turn')
 
 @app.post('/play_card/')
-async def play_card(lobby_name: str, user_name: str, target_user_name: str, id_card: int):
+async def play_card(request: PlayCardRequest):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
+    target_user_name = request.target_user_name
+    card_id = request.card_id
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
     game_logic = GameLogic()
@@ -271,18 +298,20 @@ async def play_card(lobby_name: str, user_name: str, target_user_name: str, id_c
     if (user_repo.get_total_cards(user_name) < 5):
         raise HTTPException(status_code=406, detail='This user does not have 5 cards')
 
-    if not (user_repo.check_user_has_card(user_name, id_card)):
+    if not (user_repo.check_user_has_card(user_name, card_id)):
         raise HTTPException(status_code=401, detail='This user does not have this card')
     
     try:
-        game_logic.play_card(user_name, id_card, lobby_name)
+        game_logic.play_card(user_name, card_id, lobby_name)
         return  {'message': 'Card played successfully'}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while playing the card')
 
 @app.post('/end_game/')
-async def end_game(lobby_name: str, user_name: str):
+async def end_game(request: LobbyUserRequest):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
     game_logic = GameLogic()
