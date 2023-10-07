@@ -1,4 +1,4 @@
-#probando branch
+#branch leave_lobby
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
