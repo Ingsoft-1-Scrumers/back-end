@@ -33,7 +33,7 @@ def load_users_for_test_start_and_end_game():
                 User(name=name)
 
 @db_session
-def load_lobby_and_game_for_test_strat_and_end_game():
+def load_lobby_and_game_for_test_start_and_end_game():
 
     with db_session:
         if count(Lobby.select()) == 1:
@@ -53,5 +53,5 @@ if __name__ == '__main__':
 
     # datos para testear el end game
     load_users_for_test_start_and_end_game()
-    load_lobby_and_game_for_test_strat_and_end_game()
+    load_lobby_and_game_for_test_start_and_end_game()
     load_users_2_in_lobby_2()

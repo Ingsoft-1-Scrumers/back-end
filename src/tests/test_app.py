@@ -483,6 +483,20 @@ def test_start_game__error(mock_UserRepository, mock_LobbyRepository, mock_GameL
     assert response.status_code == 500
     assert response.json() == {'detail': 'An error occurred while starting the game'}
 
+
+@patch('app.LobbyRepository')
+def test_is_lobby_exist(mock_LobbyRepository):
+    mock_repository_lobby = MagicMock()
+
+    mock_repository_lobby.lobby_exists.return_value = True
+
+    mock_LobbyRepository.return_value = mock_repository_lobby
+
+    response = client.get('/is_lobby_exist/Lobby1')
+    assert response.status_code == 200
+    assert response.json() == {'exist': True}
+     
+    
 # Ver si el juego ha empezado tests
 @patch('app.LobbyRepository')
 def test_is_game_started__game_started(mock_LobbyRepository):
