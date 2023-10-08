@@ -1210,3 +1210,25 @@ def test_end_game__error(mock_UserRepository, mock_LobbyRepository, mock_GameLog
     response = client.post('/end_game/?lobby_name=Lobby1&user_name=User1')
     assert response.status_code == 500
     assert response.json() == {'detail': 'An error occurred while ending the game'}
+
+@patch('app.LobbyRepository')
+@patch('app.UserRepository')
+def test_leave_lobby(mock_UserRepository, mock_LobbyRepository):
+    mock_repository_user = MagicMock()
+    mock_repository_lobby = MagicMock()
+
+    mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_user.is_user_in_lobby.return_value = True
+    mock_repository_lobby.is_game_started.return_value = False
+    mock_repository_lobby.leave_lobby.return_value = True #TODO funciona igual sin esta linea
+
+    mock_UserRepository.return_value = mock_repository_user
+    mock_LobbyRepository.return_value = mock_repository_lobby
+
+    response = client.post('/leave_lobby/?lobby_name=Lobby1&user_name=User1')
+    #print(mock_repository_lobby.leave_lobby.call_args)  # Verifica cómo se llamó al método
+    #print(response.json())  # Imprime la respuesta real obtenida
+
+    assert response.status_code == 200
+    assert response.json() == {'message': 'User left lobby successfully'}
+

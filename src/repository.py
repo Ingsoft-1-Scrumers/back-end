@@ -183,6 +183,17 @@ class LobbyRepository:
         max_players = self.get_max_players(lobby_name)
         lobby_users = self.get_lobby_set_users(lobby_name)
         return len(lobby_users) == max_players
+
+    @db_session
+    def leave_lobby(self, lobby_name: str, user_name: str):
+        user_repo = UserRepository()
+        lobby_users = self.get_lobby_set_users(lobby_name)
+        if user_repo.is_user_host(lobby_name, user_name):
+            self.remove_all_users_from_lobby(lobby_name)
+            self.remove_lobby(lobby_name)
+        else:
+            user = lobby_users.select().where(name=user_name).first()
+            lobby_users.remove(user)
     
     @db_session
     def can_start_game(self, lobby_name: str) -> bool:

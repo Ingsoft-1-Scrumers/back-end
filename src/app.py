@@ -302,3 +302,24 @@ async def end_game(lobby_name: str, user_name: str):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while ending the game')
+
+@app.post('/leave_lobby/')
+async def leave_lobby(lobby_name: str, user_name: str):
+    user_repo = UserRepository()
+    lobby_repo = LobbyRepository()
+
+    if not (lobby_repo.lobby_exists(lobby_name)):
+        raise HTTPException(status_code=404, detail='This lobby name does not exist')
+
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='This user is not in the lobby')
+
+    if (lobby_repo.is_game_started(lobby_name)):
+        raise HTTPException(status_code=406, detail='This game has already started')
+    
+    try:
+        lobby_repo.leave_lobby(lobby_name, user_name)
+        return  {'message': 'User left lobby successfully'}
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while leaving the lobby')
