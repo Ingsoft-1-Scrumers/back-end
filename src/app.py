@@ -21,14 +21,15 @@ app.add_middleware(
 async def get_lobby_status(websocket: WebSocket, lobby_name: str):
     lobby_repo = LobbyRepository()
     await manager.lobby_connect(websocket, lobby_name)
-    user_dict = await lobby_repo.get_lobby_users(lobby_name)
+    user_dict = lobby_repo.get_lobby_users(lobby_name)
+    await manager.send_text_to_user(websocket, 'Hola')
     await manager.send_text_to_user(websocket, str(user_dict))
     try:
         while True:
             await manager.receive_text_from_user(websocket)
     except WebSocketDisconnect:
         manager.lobby_disconnect(websocket, lobby_name)
-        user_dict = await lobby_repo.get_lobby_users(lobby_name)
+        user_dict = lobby_repo.get_lobby_users(lobby_name)
         await manager.broadcast_to_lobby(lobby_name, str(user_dict))
 
 
@@ -101,9 +102,9 @@ async def join_lobby(request: JoinLobbyRequest):
     
     try:
         lobby_repo.add_user_to_lobby(lobby_name, user_name)
-        user_dict = await lobby_repo.get_lobby_users(lobby_name)
-        manager.broadcast_to_lobby(lobby_name, user_dict)
-        return {'message': 'Joined lobby'}
+        user_dict = lobby_repo.get_lobby_users(lobby_name)
+        await manager.broadcast_to_lobby(lobby_name, str(user_dict))
+        return {'message': 'User joined successfully'}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while joining the lobby')
@@ -130,7 +131,7 @@ async def start_game(request: LobbyUserRequest):
 
     try:
         game_logic.start_game(lobby_name)
-        manager.broadcast_to_lobby(lobby_name, 'Game started')
+        await manager.broadcast_to_lobby(lobby_name, 'Game started')
         return {'message': 'Game started successfully'}
     except Exception as e:
         print(e)

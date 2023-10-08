@@ -163,7 +163,7 @@ class LobbyRepository:
         return len(lobby.users)
 
     @db_session 
-    async def get_lobby_users(self, lobby_name: str) -> [dict]:
+    def get_lobby_users(self, lobby_name: str) -> [dict]:
         lobby_users = self.get_lobby_set_users(lobby_name)
         users_dict = [{'name': user.name} for user in lobby_users]
         users_dict.append({'host': self.get_host_name(lobby_name)})
