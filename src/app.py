@@ -280,6 +280,41 @@ async def play_card(lobby_name: str, user_name: str, target_user_name: str, id_c
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while playing the card')
+    
+@app.post('/play_card/')
+async def only_discard_card(lobby_name: str, user_name: str, id_card: int):
+    user_repo = UserRepository()
+    lobby_repo = LobbyRepository()
+    game_logic = GameLogic()
+    
+    if not (lobby_repo.lobby_exists(lobby_name)):
+        raise HTTPException(status_code=404, detail='This lobby name does not exist')
+    
+    if not (lobby_repo.is_game_started(lobby_name)):
+        raise HTTPException(status_code=406, detail='This game has not started yet')
+
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='This user is not in the lobby')
+    
+    # En esta sprint solo se puede jugar cartas en tu turno (no hay cartas de defensa)
+    if not (user_repo.is_user_turn(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='It is not your turn')
+    
+    # En esta sprint solo se puede jugar una carta si se tienen 5
+    if (user_repo.get_total_cards(user_name) < 5):
+        raise HTTPException(status_code=406, detail='This user does not have 5 cards')
+
+    if not (user_repo.check_user_has_card(user_name, id_card)):
+        raise HTTPException(status_code=401, detail='This user does not have this card')
+    
+    try:
+        game_logic.only_discard_card(user_name, id_card, lobby_name)
+        return  {'message': 'Card successfully discarded'}
+    except ValueError:
+        raise HTTPException(status_code=406, detail='You cannot discard this card')
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while playing the card')
 
 @app.post('/end_game/')
 async def end_game(lobby_name: str, user_name: str):
