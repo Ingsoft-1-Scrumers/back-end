@@ -16,17 +16,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.websocket("/lobby_status/{lobby_name}")
 async def get_lobby_status(websocket: WebSocket, lobby_name: str):
     lobby_repo = LobbyRepository()
-    await websocket.accept()
     await manager.lobby_connect(websocket, lobby_name)
-    
-    while True:
-        test = await websocket.receive_text()
-        print(test)
-        data = lobby_repo.get_lobby_users(lobby_name)
-        await manager.broadcast_to_lobby(lobby_name, str(data))
+    user_dict = await lobby_repo.get_lobby_users(lobby_name)
+    await manager.send_text_to_user(websocket, str(user_dict))
+    try:
+        while True:
+            await manager.receive_text_from_user(websocket)
+    except WebSocketDisconnect:
+        manager.lobby_disconnect(websocket, lobby_name)
+        user_dict = await lobby_repo.get_lobby_users(lobby_name)
+        await manager.broadcast_to_lobby(lobby_name, str(user_dict))
+
 
 @app.post('/create_user/')
 async def create_user(new_user: CreateUserRequest):
@@ -97,29 +101,12 @@ async def join_lobby(request: JoinLobbyRequest):
     
     try:
         lobby_repo.add_user_to_lobby(lobby_name, user_name)
+        user_dict = await lobby_repo.get_lobby_users(lobby_name)
+        manager.broadcast_to_lobby(lobby_name, user_dict)
         return {'message': 'Joined lobby'}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while joining the lobby')
-
-'''
-@app.get('/lobby_users/{lobby_name}')
-async def get_lobby_users(lobby_name: str, user_name: str):
-    lobby_repo = LobbyRepository()
-    user_repo = UserRepository()
-    
-    if not (lobby_repo.lobby_exists(lobby_name)):
-        raise HTTPException(status_code=404, detail='This lobby name does not exist')
-    
-    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
-        raise HTTPException(status_code=401, detail='This user is not in the lobby')
-    
-    try:
-        return lobby_repo.get_lobby_users(lobby_name)
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail='An error occurred while getting the lobby users')
-'''
 
 @app.post('/start_game/')
 async def start_game(request: LobbyUserRequest):
@@ -143,6 +130,7 @@ async def start_game(request: LobbyUserRequest):
 
     try:
         game_logic.start_game(lobby_name)
+        manager.broadcast_to_lobby(lobby_name, 'Game started')
         return {'message': 'Game started successfully'}
     except Exception as e:
         print(e)
