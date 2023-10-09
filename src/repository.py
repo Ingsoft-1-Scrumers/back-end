@@ -32,7 +32,7 @@ class UserRepository:
         hand_dict = [{'id': card.id,
                     'name': card.name, 
                     'type': card.type} for card in hand]
-        return str(hand_dict.sort(key=lambda card: card['id']))
+        return str(hand_dict)
 
     @db_session
     def get_total_cards(self, user_name: str) -> int:
@@ -167,7 +167,7 @@ class LobbyRepository:
         lobby_users = self.get_lobby_set_users(lobby_name)
         users_dict = [{'name': user.name} for user in lobby_users]
         users_dict.append({'host': self.get_host_name(lobby_name)})
-        return str(users_dict.sort(key=lambda user: user['name']))
+        return str(users_dict)
     
     @db_session
     def get_joinable_lobby_listings(self) -> str:
@@ -181,7 +181,7 @@ class LobbyRepository:
                                   'total_players': len(lobby.users),
                                   'max_players': lobby.max_players,
                                   'secure': lobby.password is not None} for lobby in joinable_lobbies]
-        return str(joinable_lobbies_dict.sort(key=lambda lobby: lobby['name']))
+        return str(joinable_lobbies_dict)
     
     @db_session
     def is_game_started(self, lobby_name: str) -> bool:

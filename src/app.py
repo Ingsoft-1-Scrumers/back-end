@@ -90,7 +90,6 @@ async def get_game_status(websocket: WebSocket, lobby_name: str, user_name: str)
             await manager.game_user_disconnect(lobby_name, user_name)
             await manager.broadcast_to_game(lobby_name, f"Message - Server: {user_name} has left the game")
 
-
 @app.post('/create_user/')
 async def create_user(new_user: CreateUserRequest):
     user_name = new_user.user_name
