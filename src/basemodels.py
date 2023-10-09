@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from fastapi import WebSocket
 
 class CreateUserRequest(BaseModel):
     user_name: str
@@ -25,3 +26,11 @@ class PlayCardRequest(BaseModel):
     target_user_name: str
     card_id: int
 
+class UserWSRequest(BaseModel):
+    websocket: WebSocket
+    user_name: str
+
+class LobbyWSRequest(BaseModel):
+    websocket : WebSocket
+    lobby_name: str
+    user_name: str

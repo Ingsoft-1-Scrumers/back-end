@@ -1,27 +1,106 @@
-from fastapi import WebSocket
+from fastapi import WebSocket, HTTPException
 
 class ConnectionManager:
     def __init__(self):
-        self.lobby_connections: dict[str, list[WebSocket]] = {}
-        
-    async def lobby_connect(self, websocket: WebSocket, lobby_name: str):
+        self.user_connections: dict[str, WebSocket] = {}
+        self.lobby_connections: dict[str, dict[str, WebSocket]] = {}
+
+    # User Connections
+    async def user_connect(self, websocket: WebSocket, user_name: str):
         await websocket.accept()
+
+        if user_name in self.user_connections:
+            raise HTTPException(status_code= 400, detail= "User WebSocket already exists")
+        
+    async def user_disconnet(self, user_name: str):
+        if user_name not in self.user_connections:
+            raise Exception("User WebSocket does not exist")
+        
+        connection = self.user_connections[user_name]
+        await connection.close()
+        self.user_connections.pop(user_name)
+
+    async def close_user_connections(self):
+        for user_name, connection in self.user_connections.items():
+            await connection.close()
+            self.user_connections.pop(user_name)
+
+    async def send_message_to_user(self, user_name: str, message: str):
+        if user_name not in self.user_connections:
+            raise Exception("User WebSocket does not exist")
+        
+        connection = self.user_connections[user_name]
+        await connection.send_text(message)
+
+    async def user_connection_sleep(self, user_name: str):
+        if user_name not in self.user_connections:
+            raise Exception("User WebSocket does not exist")
+        
+        connection = self.user_connections[user_name]
+        await connection.receive_text()
+
+    async def broadcast_to_users(self, message: str):
+        for connection in self.user_connections.values():
+            await connection.send_text(message)
+        
+    # Lobby Connections
+    async def lobby_user_connect(self, websocket: WebSocket, lobby_name: str, user_name: str):
+        await websocket.accept()
+
         if lobby_name not in self.lobby_connections:
-            self.lobby_connections[lobby_name] = []
-        self.lobby_connections[lobby_name].append(websocket)
+            self.lobby_connections[lobby_name] = {}
+
+        if user_name in self.lobby_connections[lobby_name]:
+            raise HTTPException(status_code= 400, detail= "Lobby User WebSocket already")
+        
+        self.lobby_connections[lobby_name][user_name] = websocket
+
+    async def lobby_user_disconnect(self, lobby_name: str, user_name: str):
+        if lobby_name not in self.lobby_connections:
+            raise Exception("Lobby does not exist")
+
+        if user_name not in self.lobby_connections[lobby_name]:
+            raise Exception("Lobby User WebSocket does not exist")
+        
+        connection = self.lobby_connections[lobby_name][user_name]
+        await connection.close()
+        self.lobby_connections[lobby_name].pop(user_name)
+
+        if len(self.lobby_connections[lobby_name]) == 0:
+            self.lobby_connections.pop(lobby_name)
+
+    async def close_lobby_connections(self, lobby_name: str):
+        if lobby_name not in self.lobby_connections:
+            raise Exception("Lobby does not exist")
+        
+        for user_name, connection in self.lobby_connections[lobby_name].items():
+            await connection.close()
+            self.lobby_connections[lobby_name].pop(user_name)
+        self.lobby_connections.pop(lobby_name)
+    
+    async def send_message_to_lobby_user(self, lobby_name: str, user_name: str, message: str):
+        if lobby_name not in self.lobby_connections:
+            raise Exception("Lobby does not exist")
+
+        if user_name not in self.lobby_connections[lobby_name]:
+            raise Exception("Lobby User WebSocket does not exist")
+
+        connection = self.lobby_connections[lobby_name][user_name]
+        await connection.send_text(message)
+
+    async def receive_message_from_lobby_user(self, lobby_name: str, user_name: str) -> str:
+        if lobby_name not in self.lobby_connections:
+            raise Exception("Lobby does not exist")
+
+        if user_name not in self.lobby_connections[lobby_name]:
+            raise Exception("Lobby User WebSocket does not exist")
+
+        connection = self.lobby_connections[lobby_name][user_name]
+        return await connection.receive_text()
 
     async def broadcast_to_lobby(self, lobby_name: str, message: str):
-        if lobby_name in self.lobby_connections:
-            for connection in self.lobby_connections[lobby_name]:
-                await connection.send_text(message)
+        if lobby_name not in self.lobby_connections:
+            raise Exception("Lobby does not exist")
 
-    def lobby_disconnect(self, websocket: WebSocket, lobby_name: str):
-        self.lobby_connections[lobby_name].remove(websocket)
-        if len(self.lobby_connections[lobby_name]) == 0:
-            del self.lobby_connections[lobby_name]
-    
-    async def send_text_to_user(self, websocket: WebSocket, message: str):
-        await websocket.send_text(message)
-
-    async def receive_text_from_user(self, websocket: WebSocket) -> str:
-        return await websocket.receive_text()
+        for connection in self.lobby_connections[lobby_name].values():
+            await connection.send_text(message)

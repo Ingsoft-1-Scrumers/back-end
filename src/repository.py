@@ -110,7 +110,7 @@ class UserRepository:
 
 class LobbyRepository:
 
-    @db_session #! No hay lobbies sin contraseña
+    @db_session
     def create_lobby(self, lobby_name: str, min_players: int, max_players: int, password: str, host_name: str):
         user_repo = UserRepository()
         host = user_repo.get_user(host_name)
@@ -163,11 +163,25 @@ class LobbyRepository:
         return len(lobby.users)
 
     @db_session 
-    def get_lobby_users(self, lobby_name: str) -> [dict]:
+    def get_lobby_users(self, lobby_name: str) -> str:
         lobby_users = self.get_lobby_set_users(lobby_name)
         users_dict = [{'name': user.name} for user in lobby_users]
         users_dict.append({'host': self.get_host_name(lobby_name)})
-        return users_dict
+        return str(users_dict)
+    
+    @db_session
+    def get_joinable_lobby_listings(self) -> str:
+        not_started_lobbies = Lobby.select().where(game=None)
+        joinable_lobbies = []
+        for lobby in not_started_lobbies:
+            if (len(lobby.users) != lobby.max_players):
+                joinable_lobbies.append(lobby)
+        joinable_lobbies_dict = [{'name': lobby.name, 
+                                  'min_players': lobby.min_players,
+                                  'total_players': len(lobby.users),
+                                  'max_players': lobby.max_players,
+                                  'secure': lobby.password is not None} for lobby in joinable_lobbies]
+        return str(joinable_lobbies_dict)
     
     @db_session
     def is_game_started(self, lobby_name: str) -> bool:
@@ -212,6 +226,7 @@ class LobbyRepository:
     def remove_lobby(self, lobby_name: str):
         lobby = self.get_lobby(lobby_name)
         lobby.delete()
+
 
 class GameRepository:
 
