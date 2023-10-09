@@ -16,8 +16,6 @@ class ConnectionManager:
         if user_name not in self.user_connections:
             raise Exception("User WebSocket does not exist")
         
-        connection = self.user_connections[user_name]
-        await connection.close()
         self.user_connections.pop(user_name)
 
     async def close_user_connections(self):
@@ -62,8 +60,6 @@ class ConnectionManager:
         if user_name not in self.lobby_connections[lobby_name]:
             raise Exception("Lobby User WebSocket does not exist")
         
-        connection = self.lobby_connections[lobby_name][user_name]
-        await connection.close()
         self.lobby_connections[lobby_name].pop(user_name)
 
         if len(self.lobby_connections[lobby_name]) == 0:
