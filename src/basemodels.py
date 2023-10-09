@@ -27,10 +27,8 @@ class PlayCardRequest(BaseModel):
     card_id: int
 
 class UserWSRequest(BaseModel):
-    websocket: WebSocket
     user_name: str
 
 class LobbyWSRequest(BaseModel):
-    websocket : WebSocket
     lobby_name: str
     user_name: str

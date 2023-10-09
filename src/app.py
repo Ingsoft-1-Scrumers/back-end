@@ -17,8 +17,7 @@ app.add_middleware(
 )
 
 @app.websocket("/lobby_listing/")
-async def get_lobby_listing(UserWSRequest: UserWSRequest):
-    websocket = UserWSRequest.websocket
+async def get_lobby_listing(websocket: WebSocket, UserWSRequest: UserWSRequest):
     user_name = UserWSRequest.user_name
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
@@ -36,8 +35,7 @@ async def get_lobby_listing(UserWSRequest: UserWSRequest):
         manager.user_disconnet(user_name)
 
 @app.websocket("/lobby/{lobby_name}")
-async def get_lobby_status(LobbyWSRequest: LobbyWSRequest):
-    websocket = LobbyWSRequest.websocket
+async def get_lobby_status(websocket: WebSocket, LobbyWSRequest: LobbyWSRequest):
     lobby_name = LobbyWSRequest.lobby_name
     user_name = LobbyWSRequest.user_name
     lobby_repo = LobbyRepository()
