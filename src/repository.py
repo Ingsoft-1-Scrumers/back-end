@@ -213,6 +213,15 @@ class LobbyRepository:
         lobby = self.get_lobby(lobby_name)
         lobby.delete()
 
+    @db_session
+    def get_lobbies(self) -> [dict]: #Ver type del return
+        lobbies = Lobby.select()
+        lobbies_dict = [{'name': lobby.name, 
+                        'min_players': lobby.min_players,
+                        'max_players': lobby.max_players,
+                        'amount_users': len(lobby.users)} for lobby in lobbies]
+        return lobbies_dict 
+
 class GameRepository:
 
     @db_session
