@@ -52,10 +52,16 @@ async def get_lobby_status(websocket: WebSocket, lobby_name: str, user_name: str
             message = await manager.receive_message_from_lobby_user(lobby_name, user_name)
             await manager.broadcast_to_lobby(lobby_name, f"Message: {user_name}: {message}")
     except WebSocketDisconnect: #! Aca se puede hacer la logica para una desconexión no esperada
-        await manager.lobby_user_disconnect(lobby_name, user_name)
-        user_dict = lobby_repo.get_lobby_users(lobby_name)
-        await manager.broadcast_to_lobby(lobby_name, f"Message: Server: {user_name} has left the lobby")
-        await manager.broadcast_to_lobby(lobby_name, f"Users: {user_dict}")
+        if (user_repo.is_user_host(lobby_name, user_name)):
+            await manager.broadcast_to_lobby(lobby_name, 'Notification: The host has left the lobby')
+            await manager.close_lobby_connections(lobby_name)
+            joinable_lobbies = lobby_repo.get_joinable_lobby_listings()
+            await manager.broadcast_to_users(joinable_lobbies)
+        else:
+            await manager.lobby_user_disconnect(lobby_name, user_name)
+            user_dict = lobby_repo.get_lobby_users(lobby_name)
+            await manager.broadcast_to_lobby(lobby_name, f"Message: Server: {user_name} has left the lobby")
+            await manager.broadcast_to_lobby(lobby_name, f"Users: {user_dict}")
 
 @app.post('/create_user/')
 async def create_user(new_user: CreateUserRequest):
