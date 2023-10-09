@@ -27,12 +27,12 @@ class UserRepository:
         return hand
 
     @db_session
-    def get_user_hand(self, user_name: str) -> [dict]:
+    def get_user_hand(self, user_name: str) -> str:
         hand = self.get_hand(user_name)
         hand_dict = [{'id': card.id,
                     'name': card.name, 
                     'type': card.type} for card in hand]
-        return hand_dict
+        return str(hand_dict.sort(key=lambda card: card['id']))
 
     @db_session
     def get_total_cards(self, user_name: str) -> int:
@@ -167,7 +167,7 @@ class LobbyRepository:
         lobby_users = self.get_lobby_set_users(lobby_name)
         users_dict = [{'name': user.name} for user in lobby_users]
         users_dict.append({'host': self.get_host_name(lobby_name)})
-        return str(users_dict)
+        return str(users_dict.sort(key=lambda user: user['name']))
     
     @db_session
     def get_joinable_lobby_listings(self) -> str:
@@ -181,7 +181,7 @@ class LobbyRepository:
                                   'total_players': len(lobby.users),
                                   'max_players': lobby.max_players,
                                   'secure': lobby.password is not None} for lobby in joinable_lobbies]
-        return str(joinable_lobbies_dict)
+        return str(joinable_lobbies_dict.sort(key=lambda lobby: lobby['name']))
     
     @db_session
     def is_game_started(self, lobby_name: str) -> bool:
@@ -259,6 +259,11 @@ class GameRepository:
         return game.turn
     
     @db_session
+    def get_turn_user(self, game_name: str) -> str:
+        turn = self.get_turn(game_name)
+        return turn.user.name
+    
+    @db_session
     def get_amount_players(self, game_name: str) -> int:
         game = self.get_game(game_name)
         return game.amount_players
@@ -270,10 +275,10 @@ class GameRepository:
         return n_position
 
     @db_session
-    def get_users_position(self, game_name: str) -> [dict]:
+    def get_users_position(self, game_name: str) -> str:
         positions = self.get_all_positions(game_name)
         users_dict = [{'name': position.user.name, 'position': position.number} for position in positions]
-        return users_dict
+        return str(users_dict)
     
     @db_session
     def assign_turn(self, position: Position, game_name: str):
@@ -299,6 +304,14 @@ class CardRepository:
         if card is None:
             raise ValueError("Card does not exist")
         return card
+    
+    @db_session
+    def get_card_dict(self, card_id: int) -> str:
+        card = self.get_card(card_id)
+        card_dict = {'id': card.id,
+                     'name': card.name, 
+                     'type': card.type}
+        return str(card_dict)
 
 class PositionRepository:
 

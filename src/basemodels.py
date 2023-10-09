@@ -16,8 +16,11 @@ class JoinLobbyRequest(BaseModel):
     password: str
     user_name: str
 
-class LobbyUserRequest(BaseModel):
+class StartGameRequest(BaseModel):
     lobby_name: str
+    user_name: str
+
+class LobbyUserRequest(BaseModel):
     user_name: str
 
 class PlayCardRequest(BaseModel):
@@ -25,3 +28,7 @@ class PlayCardRequest(BaseModel):
     user_name: str
     target_user_name: str
     card_id: int
+
+class EndLobbyUserRequest(BaseModel):
+    lobby_name: str
+    user_name: str

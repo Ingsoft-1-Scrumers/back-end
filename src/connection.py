@@ -4,6 +4,7 @@ class ConnectionManager:
     def __init__(self):
         self.user_connections: dict[str, WebSocket] = {}
         self.lobby_connections: dict[str, dict[str, WebSocket]] = {}
+        self.game_connections: dict[str, dict[str, WebSocket]] = {}
 
     # User Connections
     async def user_connect(self, websocket: WebSocket, user_name: str):
@@ -99,4 +100,65 @@ class ConnectionManager:
             raise Exception("Lobby does not exist")
 
         for connection in self.lobby_connections[lobby_name].values():
+            await connection.send_text(message)
+    
+    # Game User Connections
+    async def game_user_connect(self, websocket: WebSocket, game_name: str, user_name: str):
+        await websocket.accept()
+
+        if game_name not in self.game_connections:
+            self.game_connections[game_name] = {}
+
+        if user_name in self.game_connections[game_name]:
+            raise HTTPException(status_code= 400, detail= "Game User WebSocket already")
+        
+        self.game_connections[game_name][user_name] = websocket
+
+    async def game_user_disconnect(self, game_name: str, user_name: str):
+        if game_name not in self.game_connections:
+            raise Exception("Game does not exist")
+
+        if user_name not in self.game_connections[game_name]:
+            raise Exception("Game User WebSocket does not exist")
+        
+        self.game_connections[game_name].pop(user_name)
+
+        if len(self.game_connections[game_name]) == 0:
+            self.game_connections.pop(game_name)
+
+    async def close_game_connections(self, game_name: str):
+        if game_name not in self.game_connections:
+            raise Exception("Game does not exist")
+        
+        for user_name, connection in self.game_connections[game_name].items():
+            await connection.close()
+            self.game_connections[game_name].pop(user_name)
+
+        self.game_connections.pop(game_name)
+
+    async def send_message_to_game_user(self, game_name: str, user_name: str, message: str):
+        if game_name not in self.game_connections:
+            raise Exception("Game does not exist")
+
+        if user_name not in self.game_connections[game_name]:
+            raise Exception("Game User WebSocket does not exist")
+
+        connection = self.game_connections[game_name][user_name]
+        await connection.send_text(message)
+
+    async def game_user_connection_sleep(self, game_name: str, user_name: str):
+        if game_name not in self.game_connections:
+            raise Exception("Game does not exist")
+
+        if user_name not in self.game_connections[game_name]:
+            raise Exception("Game User WebSocket does not exist")
+
+        connection = self.game_connections[game_name][user_name]
+        await connection.receive_text()
+
+    async def broadcast_to_game(self, game_name: str, message: str):
+        if game_name not in self.game_connections:
+            raise Exception("Game does not exist")
+
+        for connection in self.game_connections[game_name].values():
             await connection.send_text(message)
