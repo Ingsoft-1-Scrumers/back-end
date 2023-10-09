@@ -25,10 +25,3 @@ class PlayCardRequest(BaseModel):
     user_name: str
     target_user_name: str
     card_id: int
-
-class UserWSRequest(BaseModel):
-    user_name: str
-
-class LobbyWSRequest(BaseModel):
-    lobby_name: str
-    user_name: str
