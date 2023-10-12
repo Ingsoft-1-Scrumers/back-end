@@ -1,7 +1,5 @@
 from models import *
 from pony.orm import db_session
-from settings import CARDS_PER_USER
-from template import ALL_TEMPLATES
 
 #! Convencion: Si ya tenemos un objeto, podemos acceder a sus atributos sin usar una clase repository
 

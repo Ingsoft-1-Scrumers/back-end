@@ -411,8 +411,7 @@ def test_get_users_position(mock_UserRepository, mock_LobbyRepository, mock_Game
     mock_LobbyRepository.return_value = mock_repository_lobby
     mock_GameRepository.return_value = mock_repository_game
 
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
-    response = client.put(url='/get_users_position/Lobby1', json=json_body)
+    response = client.get(url='/get_users_position/Lobby1?user_name=User1')
     assert response.status_code == 200
     assert response.json() == lobby_positions
 
@@ -424,8 +423,7 @@ def test_get_users_position__lobby_does_not_exist(mock_LobbyRepository):
 
     mock_LobbyRepository.return_value = mock_repository_lobby
 
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
-    response = client.put(url='/get_users_position/Lobby1', json=json_body)
+    response = client.get(url='/get_users_position/Lobby1?user_name=User1')
     assert response.status_code == 404
     assert response.json() == {'detail': 'This lobby name does not exist'}
 
@@ -441,8 +439,7 @@ def test_get_users_position__user_not_in_lobby(mock_UserRepository, mock_LobbyRe
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
 
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
-    response = client.put(url='/get_users_position/Lobby1', json=json_body)
+    response = client.get(url='/get_users_position/Lobby1?user_name=User1')
     assert response.status_code == 401
     assert response.json() == {'detail': 'This user is not in the lobby'}
 
@@ -459,8 +456,7 @@ def test_get_users_position__game_not_started(mock_UserRepository, mock_LobbyRep
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
 
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
-    response = client.put(url='/get_users_position/Lobby1', json=json_body)
+    response = client.get(url='/get_users_position/Lobby1?user_name=User1')
     assert response.status_code == 406
     assert response.json() == {'detail': 'This game has not started yet'}
 
@@ -481,8 +477,7 @@ def test_get_users_position__error(mock_UserRepository, mock_LobbyRepository, mo
     mock_LobbyRepository.return_value = mock_repository_lobby
     mock_GameRepository.return_value = mock_repository_game
 
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
-    response = client.put(url='/get_users_position/Lobby1', json=json_body)
+    response = client.get(url='/get_users_position/Lobby1?user_name=User1')
     assert response.status_code == 500
     assert response.json() == {'detail': 'An error occurred while getting the users position'}
 
@@ -588,8 +583,7 @@ def test_steal_card_from_deck(mock_UserRepository, mock_LobbyRepository, mock_Ga
     mock_LobbyRepository.return_value = mock_repository_lobby
     mock_GameLogic.return_value = mock_repository_game_logic
 
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
-    response = client.put(url='/steal_card_from_deck/Lobby1', json=json_body)
+    response = client.get(url='/steal_card_from_deck/Lobby1?user_name=User1')
     assert response.status_code == 200
     assert response.json() == card
 
@@ -601,8 +595,7 @@ def test_steal_card_from_deck__lobby_does_not_exist(mock_LobbyRepository):
 
     mock_LobbyRepository.return_value = mock_repository_lobby
 
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
-    response = client.put(url='/steal_card_from_deck/Lobby1', json=json_body)
+    response = client.get(url='/steal_card_from_deck/Lobby1?user_name=User1')
     assert response.status_code == 404
     assert response.json() == {'detail': 'This lobby name does not exist'}
 
@@ -618,8 +611,7 @@ def test_steal_card_from_deck__user_not_in_lobby(mock_UserRepository, mock_Lobby
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
 
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
-    response = client.put(url='/steal_card_from_deck/Lobby1', json=json_body)
+    response = client.get(url='/steal_card_from_deck/Lobby1?user_name=User1')
     assert response.status_code == 401
     assert response.json() == {'detail': 'This user is not in the lobby'}
 
@@ -636,8 +628,7 @@ def test_steal_card_from_deck__game_not_started(mock_UserRepository, mock_LobbyR
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
 
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
-    response = client.put(url='/steal_card_from_deck/Lobby1', json=json_body)
+    response = client.get(url='/steal_card_from_deck/Lobby1?user_name=User1')
     assert response.status_code == 406
     assert response.json() == {'detail': 'This game has not started yet'}
 
@@ -655,8 +646,7 @@ def test_steal_card_from_deck__user_not_turn(mock_UserRepository, mock_LobbyRepo
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
 
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
-    response = client.put(url='/steal_card_from_deck/Lobby1', json=json_body)
+    response = client.get(url='/steal_card_from_deck/Lobby1?user_name=User1')
     assert response.status_code == 401
     assert response.json() == {'detail': 'It is not your turn'}
 
@@ -675,8 +665,7 @@ def test_steal_card_from_deck__user_hand_is_full(mock_UserRepository, mock_Lobby
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
 
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
-    response = client.put(url='/steal_card_from_deck/Lobby1', json=json_body)
+    response = client.get(url='/steal_card_from_deck/Lobby1?user_name=User1')
     assert response.status_code == 406
     assert response.json() == {'detail': 'This user already has 5 cards'}
 
@@ -699,8 +688,7 @@ def test_steal_card_from_deck__error(mock_UserRepository, mock_LobbyRepository, 
     mock_LobbyRepository.return_value = mock_repository_lobby
     mock_CardRepository.return_value = mock_repository_card
 
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
-    response = client.put(url='/steal_card_from_deck/Lobby1', json=json_body)
+    response = client.get(url='/steal_card_from_deck/Lobby1?user_name=User1')
     assert response.status_code == 500
     assert response.json() == {'detail': 'An error occurred while stealing a card'}
 

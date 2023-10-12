@@ -210,9 +210,8 @@ async def start_game(request: LobbyBase):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while starting the game')
  
-@app.put('/get_users_position/{lobby_name}')
-async def get_users_position(lobby_name: str, user: UserBase):
-    user_name = user.user_name
+@app.get('/get_users_position/{lobby_name}')
+async def get_users_position(lobby_name: str, user_name: str):
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
     game_repo = GameRepository()
@@ -252,9 +251,8 @@ async def get_user_hand(lobby_name: str, user_name: str):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the hand')
 
-@app.put('/steal_card_from_deck/{lobby_name}') 
-async def steal_card_from_deck(lobby_name: str, user: UserBase):
-    user_name = user.user_name
+@app.get('/steal_card_from_deck/{lobby_name}') 
+async def steal_card_from_deck(lobby_name: str, user_name):
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
     game_logic = GameLogic()
