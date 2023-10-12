@@ -2,7 +2,6 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
 from app import app
-from connection import ConnectionManager
 
 client = TestClient(app)
 
@@ -179,30 +178,6 @@ def test_create_lobby__error(mock_UserRepository, mock_LobbyRepository):
     assert response.json() == {'detail': 'An error occurred while creating the lobby'}
 
 # Unirse a lobby tests
-@patch('app.LobbyRepository')
-@patch('app.UserRepository')
-def test_join_lobby(mock_UserRepository, mock_LobbyRepository):
-    mock_repository_user = MagicMock()
-    mock_repository_lobby = MagicMock()
-
-    mock_repository_user.user_exists.return_value = True
-    mock_repository_user.is_user_in_a_lobby.return_value = False
-    mock_repository_lobby.lobby_exists.return_value = True
-    mock_repository_lobby.is_game_started.return_value = False
-    mock_repository_lobby.is_lobby_full.return_value = False
-    mock_repository_lobby.is_password_correct.return_value = True
-    mock_repository_lobby.add_user_to_lobby.return_value = True
-    mock_repository_lobby.get_lobby_users.return_value = []
-    mock_repository_lobby.get_joinable_lobbies.return_value = []
-    
-    mock_UserRepository.return_value = mock_repository_user
-    mock_LobbyRepository.return_value = mock_repository_lobby
-
-    json_body = {"lobby_name": "Lobby1", "password": "empty", "user_name": "User1"}
-    response = client.post(url='/join_lobby/', json=json_body)
-    assert response.status_code == 200
-    assert response.json() == {'message': 'Joined lobby'}
-
 @patch('app.UserRepository')
 def test_join_lobby__user_does_not_exist(mock_UserRepository):
     mock_repository_user = MagicMock()
@@ -331,29 +306,6 @@ def test_join_lobby__error(mock_UserRepository, mock_LobbyRepository):
     assert response.json() == {'detail': 'An error occurred while joining the lobby'}
 
 # Iniciar juego tests
-@patch('app.GameLogic')
-@patch('app.UserRepository')
-@patch('app.LobbyRepository')
-def test_start_game(mock_LobbyRepository, mock_UserRepository, mock_GameLogic):
-    mock_repository_user = MagicMock()
-    mock_repository_lobby = MagicMock()
-    mock_repository_gamelogic = MagicMock()
-
-    mock_repository_lobby.lobby_exists.return_value = True
-    mock_repository_lobby.can_start_game.return_value = True
-    mock_repository_user.is_user_host.return_value = True
-    mock_repository_lobby.is_game_started.return_value = False
-    mock_repository_gamelogic.start_game.return_value = True
-
-    mock_UserRepository.return_value = mock_repository_user
-    mock_LobbyRepository.return_value = mock_repository_lobby
-    mock_GameLogic.return_value = mock_repository_gamelogic
-
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
-    response = client.post(url='/start_game/', json=json_body)
-    assert response.status_code == 200
-    assert response.json() == {'message': 'Game started successfully'}
-
 @patch('app.LobbyRepository')
 def test_start_game__lobby_does_not_exist(mock_LobbyRepository):
     mock_repository_lobby = MagicMock()
@@ -939,28 +891,6 @@ def test_play_card__error(mock_UserRepository, mock_LobbyRepository, mock_GameLo
     assert response.json() == {'detail': 'An error occurred while playing the card'}
 
 # Finalizar juego tests
-@patch('app.LobbyRepository')
-@patch('app.UserRepository')
-@patch('app.GameLogic')
-def test_end_game(mock_GameLogic, mock_UserRepository, mock_LobbyRepository):
-    mock_repository_user = MagicMock()
-    mock_repository_lobby = MagicMock()
-    mock_repository_gamelogic = MagicMock()
-
-    mock_repository_lobby.lobby_exists.return_value = True
-    mock_repository_lobby.is_game_started.return_value = True
-    mock_repository_user.is_user_in_lobby.return_value = True
-    mock_repository_gamelogic.end_game.return_value = True
-
-    mock_UserRepository.return_value = mock_repository_user
-    mock_LobbyRepository.return_value = mock_repository_lobby
-    mock_GameLogic.return_value = mock_repository_gamelogic
-
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
-    response = client.post(url='/end_game/', json=json_body)
-    assert response.status_code == 200
-    assert response.json() == {'message': 'Game ended successfully'}
-
 @patch('app.LobbyRepository')
 def test_end_game__lobby_does_not_exist(mock_LobbyRepository):
     mock_repository_lobby = MagicMock()

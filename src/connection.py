@@ -13,6 +13,8 @@ class ConnectionManager:
         if user_name in self.user_connections:
             raise HTTPException(status_code= 400, detail= "User WebSocket already exists")
         
+        self.user_connections[user_name] = websocket
+        
     async def user_disconnet(self, user_name: str):
         if user_name not in self.user_connections:
             raise Exception("User WebSocket does not exist")
@@ -161,4 +163,4 @@ class ConnectionManager:
             raise Exception("Game does not exist")
 
         for connection in self.game_connections[game_name].values():
-            await connection.send_text(message)
+            await connection.send_text(message)	

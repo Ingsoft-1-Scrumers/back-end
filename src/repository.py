@@ -208,6 +208,11 @@ class LobbyRepository:
     def is_password_correct(self, lobby_name: str, password: str) -> bool:
         lobby_password = self.get_password(lobby_name)
         return lobby_password == password
+    
+    @db_session
+    def is_lobby_private(self, lobby_name: str) -> bool:
+        lobby_password = self.get_password(lobby_name)
+        return lobby_password is not None
 
     @db_session
     def add_user_to_lobby(self, lobby_name: str, user_name: str):

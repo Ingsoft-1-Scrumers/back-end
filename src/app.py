@@ -16,24 +16,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.websocket("/lobby_listing/") #! Me gustaria hacer un BaseModel de esto
+@app.websocket('/lobby_listing/')
 async def get_lobby_listing(websocket: WebSocket, user_name: str):
+
     user_repo = UserRepository()
-    lobby_repo = LobbyRepository()
 
     if not (user_repo.user_exists(user_name)):
         raise HTTPException(status_code=404, detail='This user does not exist')
     
     await manager.user_connect(websocket, user_name)
-    joinable_lobbies = lobby_repo.get_joinable_lobby_listings()
-    await manager.send_message_to_user(user_name, joinable_lobbies)
     try:
         while True:
             await manager.user_connection_sleep(user_name)
-    except WebSocketDisconnect: #! Aca se puede hacer la logica para una desconexión no esperada
+    except WebSocketDisconnect:
         await manager.user_disconnet(user_name)
 
-@app.websocket("/lobby/{lobby_name}") #! Me gustaria hacer un BaseModel de esto
+@app.websocket('/lobby/{lobby_name}') 
 async def get_lobby_status(websocket: WebSocket, lobby_name: str, user_name: str):
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
@@ -45,25 +43,21 @@ async def get_lobby_status(websocket: WebSocket, lobby_name: str, user_name: str
         raise HTTPException(status_code=401, detail='This user is not in the lobby')
     
     await manager.lobby_user_connect(websocket, lobby_name, user_name)
-    user_dict = lobby_repo.get_lobby_users(lobby_name)
-    await manager.broadcast_to_lobby(lobby_name, f"Users - {user_dict}")
     try:
         while True:
             message = await manager.receive_message_from_lobby_user(lobby_name, user_name)
-            await manager.broadcast_to_lobby(lobby_name, f"Message - {user_name}: {message}")
-    except WebSocketDisconnect: #! Aca se puede hacer la logica para una desconexión no esperada
+            await manager.broadcast_to_lobby(lobby_name, f"chat_msg, {user_name}, {message}")
+    except WebSocketDisconnect:
         if (user_repo.is_user_host(lobby_name, user_name)):
-            await manager.broadcast_to_lobby(lobby_name, 'Notification - The host has left the lobby')
+            await manager.broadcast_to_lobby(lobby_name, f"user_disconnect, {user_name}")
+            await manager.broadcast_to_lobby(lobby_name, f"lobby_close")
             await manager.close_lobby_connections(lobby_name)
-            joinable_lobbies = lobby_repo.get_joinable_lobby_listings()
-            await manager.broadcast_to_users(joinable_lobbies)
+            await manager.broadcast_to_users(f"lobby_close, {lobby_name}")
         else:
             await manager.lobby_user_disconnect(lobby_name, user_name)
-            user_dict = lobby_repo.get_lobby_users(lobby_name)
-            await manager.broadcast_to_lobby(lobby_name, f"Message - Server: {user_name} has left the lobby")
-            await manager.broadcast_to_lobby(lobby_name, f"Users - {user_dict}")
+            await manager.broadcast_to_lobby(lobby_name, f"user_disconnect, {user_name}")
 
-@app.websocket("/game/{lobby_name}") #! Me gustaria hacer un BaseModel de esto
+@app.websocket('/game/{lobby_name}')
 async def get_game_status(websocket: WebSocket, lobby_name: str, user_name: str):
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
@@ -78,21 +72,16 @@ async def get_game_status(websocket: WebSocket, lobby_name: str, user_name: str)
         raise HTTPException(status_code=406, detail='This game has not started yet')
     
     await manager.game_user_connect(websocket, lobby_name, user_name)
-    await manager.send_message_to_game_user(lobby_name, user_name, 'Notification - The game has begun')
+    await manager.send_message_to_game_user(lobby_name, user_name, 'Notification - The game has loaded')
     try:
         while True:
             await manager.game_user_connection_sleep(lobby_name, user_name)
-    except WebSocketDisconnect: #! Aca se puede hacer la logica para una desconexión no esperada
-        if (user_repo.is_user_host(lobby_name, user_name)):
-            await manager.broadcast_to_game(lobby_name, 'Notification - The host has left the game')
-            await manager.close_game_connections(lobby_name)
-        else:
-            await manager.game_user_disconnect(lobby_name, user_name)
-            await manager.broadcast_to_game(lobby_name, f"Message - Server: {user_name} has left the game")
-
+    except WebSocketDisconnect:
+        await manager.game_user_disconnect(lobby_name, user_name)
+           
 @app.post('/create_user/')
-async def create_user(new_user: CreateUserRequest):
-    user_name = new_user.user_name
+async def create_user(user: UserBase):
+    user_name = user.user_name
     user_repo = UserRepository()
     
     if user_repo.user_exists(user_name):
@@ -117,12 +106,12 @@ async def is_user_exist(user_name: str):
         raise HTTPException(status_code=500, detail='An error occurred while checking if user exist')
 
 @app.post('/create_lobby/')
-async def create_lobby(new_lobby: CreateLobbyRequest):
-    lobby_name = new_lobby.lobby_name
-    min_players = new_lobby.min_players
-    max_players = new_lobby.max_players
-    password = new_lobby.password
-    host_name = new_lobby.host_name
+async def create_lobby(lobby: CreateLobbyBase):
+    lobby_name = lobby.lobby_name
+    min_players = lobby.min_players
+    max_players = lobby.max_players
+    password = lobby.password
+    host_name = lobby.host_name
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
 
@@ -137,8 +126,9 @@ async def create_lobby(new_lobby: CreateLobbyRequest):
     
     try:
         lobby_repo.create_lobby(lobby_name, min_players, max_players, password, host_name)
-        joinable_lobbies = lobby_repo.get_joinable_lobby_listings()
-        await manager.broadcast_to_users(joinable_lobbies)
+        total_users = lobby_repo.get_amount_users(lobby_name)
+        is_private = lobby_repo.is_lobby_private(lobby_name)
+        await manager.broadcast_to_users(f"new_lobby, {lobby_name}, {total_users}, {max_players}, {is_private}")
         return {'message': 'Lobby created'}
     except Exception as e:
         print(e)
@@ -156,7 +146,7 @@ async def is_lobby_exist(lobby_name: str):
         raise HTTPException(status_code=500, detail='An error occurred while checking if lobby exist')
 
 @app.post('/join_lobby/')
-async def join_lobby(request: JoinLobbyRequest):
+async def join_lobby(request: JoinLobbyBase):
     lobby_name = request.lobby_name
     password = request.password
     user_name = request.user_name
@@ -183,17 +173,16 @@ async def join_lobby(request: JoinLobbyRequest):
     
     try:
         lobby_repo.add_user_to_lobby(lobby_name, user_name)
-        user_dict = lobby_repo.get_lobby_users(lobby_name)
-        joinable_lobbies = lobby_repo.get_joinable_lobby_listings()
-        await manager.broadcast_to_lobby(lobby_name, f"Users - {user_dict}")
-        await manager.broadcast_to_users(joinable_lobbies)
+        total_users = lobby_repo.get_amount_users(lobby_name)
+        await manager.broadcast_to_lobby(lobby_name, f"user_connect, {user_name}")
+        await manager.broadcast_to_users(f"update_players, {lobby_name}, {total_users}")
         return {'message': 'Joined lobby'}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while joining the lobby')
 
 @app.post('/start_game/')
-async def start_game(request: StartGameRequest):
+async def start_game(request: LobbyBase):
     lobby_name = request.lobby_name
     user_name = request.user_name
     user_repo = UserRepository()
@@ -214,17 +203,16 @@ async def start_game(request: StartGameRequest):
 
     try:
         game_logic.start_game(lobby_name)
-        joinable_lobbies = lobby_repo.get_joinable_lobby_listings()
-        await manager.broadcast_to_lobby(lobby_name, 'Notification - The game has started')
-        await manager.broadcast_to_users(joinable_lobbies)
+        await manager.broadcast_to_lobby(lobby_name, f"game_start")
+        await manager.broadcast_to_users(f"lobby_close, {lobby_name}")
         return {'message': 'Game started successfully'}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while starting the game')
  
 @app.put('/get_users_position/{lobby_name}')
-async def get_users_position(lobby_name : str, request: LobbyUserRequest):
-    user_name = request.user_name
+async def get_users_position(lobby_name: str, user: UserBase):
+    user_name = user.user_name
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
     game_repo = GameRepository()
@@ -245,7 +233,7 @@ async def get_users_position(lobby_name : str, request: LobbyUserRequest):
         raise HTTPException(status_code=500, detail='An error occurred while getting the users position')
 
 @app.get('/get_user_hand/{lobby_name}/{user_name}') 
-async def get_user_hand(lobby_name : str, user_name : str):
+async def get_user_hand(lobby_name: str, user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()  
     
@@ -265,8 +253,8 @@ async def get_user_hand(lobby_name : str, user_name : str):
         raise HTTPException(status_code=500, detail='An error occurred while getting the hand')
 
 @app.put('/steal_card_from_deck/{lobby_name}') 
-async def steal_card_from_deck(lobby_name: str, request: LobbyUserRequest):
-    user_name = request.user_name
+async def steal_card_from_deck(lobby_name: str, user: UserBase):
+    user_name = user.user_name
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
     game_logic = GameLogic()
@@ -295,15 +283,13 @@ async def steal_card_from_deck(lobby_name: str, request: LobbyUserRequest):
         raise HTTPException(status_code=500, detail='An error occurred while stealing a card')
 
 @app.post('/play_card/')
-async def play_card(request: PlayCardRequest):
+async def play_card(request: PlayCardBase):
     lobby_name = request.lobby_name
     user_name = request.user_name
     target_user_name = request.target_user_name
     card_id = request.card_id
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
-    game_repo = GameRepository()
-    card_repo = CardRepository()
     game_logic = GameLogic()
     
     if not (lobby_repo.lobby_exists(lobby_name)):
@@ -334,17 +320,13 @@ async def play_card(request: PlayCardRequest):
     
     try:
         game_logic.play_card(user_name, card_id, lobby_name)
-        played_card = card_repo.get_card(card_id)
-        turn_user = game_repo.get_turn_user(lobby_name)
-        await manager.broadcast_to_game(lobby_name, f"Notification - {user_name} played a card {played_card} on {target_user_name}")
-        await manager.broadcast_to_game(lobby_name, f"Notification - It is {turn_user}'s turn")
         return  {'message': 'Card played successfully'}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while playing the card')
 
 @app.post('/end_game/')
-async def end_game(request: EndLobbyUserRequest):
+async def end_game(request: LobbyBase):
     lobby_name = request.lobby_name
     user_name = request.user_name
     user_repo = UserRepository()
@@ -362,8 +344,10 @@ async def end_game(request: EndLobbyUserRequest):
      
     try:
         game_logic.end_game(lobby_name)
-        await manager.broadcast_to_game(lobby_name, 'Notification - The game has ended')
-        return  {'message': 'Game ended successfully'}
+        await manager.broadcast_to_game(lobby_name, f"game_end")
+        await manager.close_game_connections(lobby_name)
+        await manager.close_lobby_connections(lobby_name)
+        return {'message': 'Game ended successfully'}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while ending the game')
