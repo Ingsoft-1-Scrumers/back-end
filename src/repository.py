@@ -1,7 +1,5 @@
 from models import *
 from pony.orm import db_session
-from settings import CARDS_PER_USER
-from template import ALL_TEMPLATES
 
 #! Convencion: Si ya tenemos un objeto, podemos acceder a sus atributos sin usar una clase repository
 
@@ -27,12 +25,12 @@ class UserRepository:
         return hand
 
     @db_session
-    def get_user_hand(self, user_name: str) -> [dict]:
+    def get_user_hand(self, user_name: str) -> str:
         hand = self.get_hand(user_name)
         hand_dict = [{'id': card.id,
                     'name': card.name, 
                     'type': card.type} for card in hand]
-        return hand_dict
+        return str(hand_dict)
 
     @db_session
     def get_total_cards(self, user_name: str) -> int:
@@ -110,7 +108,7 @@ class UserRepository:
 
 class LobbyRepository:
 
-    @db_session #! No hay lobbies sin contraseña
+    @db_session
     def create_lobby(self, lobby_name: str, min_players: int, max_players: int, password: str, host_name: str):
         user_repo = UserRepository()
         host = user_repo.get_user(host_name)
@@ -163,11 +161,25 @@ class LobbyRepository:
         return len(lobby.users)
 
     @db_session 
-    def get_lobby_users(self, lobby_name: str) -> [dict]:
+    def get_lobby_users(self, lobby_name: str) -> str:
         lobby_users = self.get_lobby_set_users(lobby_name)
         users_dict = [{'name': user.name} for user in lobby_users]
         users_dict.append({'host': self.get_host_name(lobby_name)})
-        return users_dict
+        return str(users_dict)
+    
+    @db_session
+    def get_joinable_lobby_listings(self) -> str:
+        not_started_lobbies = Lobby.select().where(game=None)
+        joinable_lobbies = []
+        for lobby in not_started_lobbies:
+            if (len(lobby.users) != lobby.max_players):
+                joinable_lobbies.append(lobby)
+        joinable_lobbies_dict = [{'name': lobby.name, 
+                                  'min_players': lobby.min_players,
+                                  'total_players': len(lobby.users),
+                                  'max_players': lobby.max_players,
+                                  'secure': lobby.password is not None} for lobby in joinable_lobbies]
+        return str(joinable_lobbies_dict)
     
     @db_session
     def is_game_started(self, lobby_name: str) -> bool:
@@ -194,6 +206,11 @@ class LobbyRepository:
     def is_password_correct(self, lobby_name: str, password: str) -> bool:
         lobby_password = self.get_password(lobby_name)
         return lobby_password == password
+    
+    @db_session
+    def is_lobby_private(self, lobby_name: str) -> bool:
+        lobby_password = self.get_password(lobby_name)
+        return lobby_password is not None
 
     @db_session
     def add_user_to_lobby(self, lobby_name: str, user_name: str):
@@ -212,6 +229,7 @@ class LobbyRepository:
     def remove_lobby(self, lobby_name: str):
         lobby = self.get_lobby(lobby_name)
         lobby.delete()
+
 
 class GameRepository:
 
@@ -244,6 +262,11 @@ class GameRepository:
         return game.turn
     
     @db_session
+    def get_turn_user(self, game_name: str) -> str:
+        turn = self.get_turn(game_name)
+        return turn.user.name
+    
+    @db_session
     def get_amount_players(self, game_name: str) -> int:
         game = self.get_game(game_name)
         return game.amount_players
@@ -255,10 +278,10 @@ class GameRepository:
         return n_position
 
     @db_session
-    def get_users_position(self, game_name: str) -> [dict]:
+    def get_users_position(self, game_name: str) -> str:
         positions = self.get_all_positions(game_name)
         users_dict = [{'name': position.user.name, 'position': position.number} for position in positions]
-        return users_dict
+        return str(users_dict)
     
     @db_session
     def assign_turn(self, position: Position, game_name: str):
@@ -284,6 +307,14 @@ class CardRepository:
         if card is None:
             raise ValueError("Card does not exist")
         return card
+    
+    @db_session
+    def get_card_dict(self, card_id: int) -> str:
+        card = self.get_card(card_id)
+        card_dict = {'id': card.id,
+                     'name': card.name, 
+                     'type': card.type}
+        return str(card_dict)
 
 class PositionRepository:
 
