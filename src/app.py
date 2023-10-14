@@ -370,3 +370,18 @@ async def leave_lobby(lobby_name: str, user_name: str):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while leaving the lobby')
+    
+@app.get('/get_lobbies/')
+async def get_lobbies(user_name: str):
+    user_repo = UserRepository()
+    lobby_repo = LobbyRepository()
+
+    if not (user_repo.user_exists(user_name)):
+        raise HTTPException(status_code=404, detail='This user does not exist')
+    
+    try:
+        lobbies = lobby_repo.get_joinable_lobby_listings()
+        return lobbies
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while ending the game')

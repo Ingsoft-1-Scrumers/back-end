@@ -241,7 +241,6 @@ class LobbyRepository:
         lobby = self.get_lobby(lobby_name)
         lobby.delete()
 
-
 class GameRepository:
 
     @db_session
