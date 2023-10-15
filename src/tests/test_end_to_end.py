@@ -19,4 +19,4 @@ def test_get_lobby_users_end_point(list_of_users):
     #la respuesta viene desordenada ya que obtiene de un set, entonces ordenamos antes de comparar
     #clasificamos en nivel de prioridad, primero los que tienen name y luego los que tienen host
     sorted_data = data.json()
-    assert sorted_data == str(list_of_users)
+    assert sorted_data == list_of_users
