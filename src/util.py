@@ -1,4 +1,6 @@
 from repository import *
+from settings import CARDS_PER_USER
+from template import ALL_TEMPLATES
 
 class GameLogic:
 

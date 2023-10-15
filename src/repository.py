@@ -30,6 +30,7 @@ class UserRepository:
         hand_dict = [{'id': card.id,
                     'name': card.name, 
                     'type': card.type} for card in hand]
+        hand_dict = sorted(hand_dict, key=lambda x: x.get('type', ''))
         return str(hand_dict)
 
     @db_session
@@ -165,6 +166,7 @@ class LobbyRepository:
         lobby_users = self.get_lobby_set_users(lobby_name)
         users_dict = [{'name': user.name} for user in lobby_users]
         users_dict.append({'host': self.get_host_name(lobby_name)})
+        users_dict = sorted(users_dict, key=lambda x: x.get('name', ''))
         return str(users_dict)
     
     @db_session
@@ -174,11 +176,11 @@ class LobbyRepository:
         for lobby in not_started_lobbies:
             if (len(lobby.users) != lobby.max_players):
                 joinable_lobbies.append(lobby)
-        joinable_lobbies_dict = [{'name': lobby.name, 
-                                  'min_players': lobby.min_players,
+        joinable_lobbies_dict = [{'name': lobby.name,
                                   'total_players': len(lobby.users),
                                   'max_players': lobby.max_players,
                                   'secure': lobby.password is not None} for lobby in joinable_lobbies]
+        joinable_lobbies_dict = sorted(joinable_lobbies_dict, key=lambda x: x.get('name', ''))
         return str(joinable_lobbies_dict)
     
     @db_session
@@ -291,6 +293,7 @@ class GameRepository:
     def get_users_position(self, game_name: str) -> str:
         positions = self.get_all_positions(game_name)
         users_dict = [{'name': position.user.name, 'position': position.number} for position in positions]
+        users_dict = sorted(users_dict, key=lambda x: x.get('position', ''))
         return str(users_dict)
     
     @db_session
