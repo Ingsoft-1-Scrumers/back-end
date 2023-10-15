@@ -146,7 +146,7 @@ async def is_lobby_exist(lobby_name: str):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while checking if lobby exist')
 
-@app.get('/get_joinable_lobbies/')
+@app.get('/joinable_lobbies/')
 async def get_joinable_lobbies(user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
@@ -274,7 +274,7 @@ async def start_game(request: LobbyBase):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while starting the game')
  
-@app.get('/get_users_position/{lobby_name}')
+@app.get('/users_position/{lobby_name}')
 async def get_users_position(lobby_name: str, user_name: str):
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
@@ -295,7 +295,7 @@ async def get_users_position(lobby_name: str, user_name: str):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the users position')
 
-@app.get('/get_user_hand/{lobby_name}/{user_name}') 
+@app.get('/user_hand/{lobby_name}/{user_name}') 
 async def get_user_hand(lobby_name: str, user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()  
