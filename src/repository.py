@@ -223,7 +223,7 @@ class LobbyRepository:
     @db_session
     def is_lobby_private(self, lobby_name: str) -> bool:
         lobby_password = self.get_password(lobby_name)
-        return lobby_password is not None
+        return lobby_password == "empty"
 
     @db_session
     def add_user_to_lobby(self, lobby_name: str, user_name: str):
