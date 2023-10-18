@@ -18,69 +18,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#! Cambiar el nombre de los endpoints nuevamente para que los del front sufran mas (Los get no me gustan)
-
-@app.websocket('/lobby_listing/')
+#! Asumimos que el usuario solo cierra pestaña cuando no esta en un lobby/partida
+@app.websocket('/websocket/{user_name}')
 async def lobby_listing(websocket: WebSocket, user_name: str):
     user_repo = UserRepository()
 
     if not (user_repo.user_exists(user_name)):
         raise HTTPException(status_code=404, detail='This user does not exist')
     
-    await manager.user_connect(websocket, user_name)
+    await manager.connect(websocket, user_name)
     try:
         while True:
-            await manager.user_connection_sleep(user_name)
+            message = await manager.receive_message(user_name)
+            lobby_name = user_repo.get_user_lobby(user_name)
+            if (lobby_name is not None):
+                await manager.broadcast_to_lobby_users(lobby_name, f"chat_msg, {user_name}, {message}")
+            else:
+                raise HTTPException(status_code=401, detail='This user is not in a lobby')
     except WebSocketDisconnect:
-        await manager.user_disconnet(user_name)
-
-@app.websocket('/lobby/{lobby_name}') 
-async def get_lobby_status(websocket: WebSocket, lobby_name: str, user_name: str):
-    lobby_repo = LobbyRepository()
-    user_repo = UserRepository()
-
-    if not (lobby_repo.lobby_exists(lobby_name)):
-        raise HTTPException(status_code=404, detail='This lobby name does not exist')
-    
-    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
-        raise HTTPException(status_code=401, detail='This user is not in the lobby')
-    
-    await manager.lobby_user_connect(websocket, lobby_name, user_name)
-    try:
-        while True:
-            message = await manager.receive_message_from_lobby_user(lobby_name, user_name)
-            await manager.broadcast_to_lobby(lobby_name, f"chat_msg, {user_name}, {message}")
-    except WebSocketDisconnect: # Si el usuario se desconecta de manera inesperada
-        if (user_repo.is_user_host(lobby_name, user_name)):
-            await manager.broadcast_to_lobby(lobby_name, f"lobby_close")
-            await manager.close_lobby_connections(lobby_name)
-            await manager.broadcast_to_users(f"lobby_close, {lobby_name}")
-        else:
-            await manager.lobby_user_disconnect(lobby_name, user_name)
-            await manager.broadcast_to_lobby(lobby_name, f"user_disconnect, {user_name}")
-            total_users = lobby_repo.get_amount_users(lobby_name)
-            await manager.broadcast_to_users(f"update_players, {lobby_name}, {total_users}")
-
-@app.websocket('/game/{lobby_name}')
-async def get_game_status(websocket: WebSocket, lobby_name: str, user_name: str):
-    lobby_repo = LobbyRepository()
-    user_repo = UserRepository()
-
-    if not (lobby_repo.lobby_exists(lobby_name)):
-        raise HTTPException(status_code=404, detail='This lobby name does not exist')
-    
-    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
-        raise HTTPException(status_code=401, detail='This user is not in the lobby')
-    
-    if not (lobby_repo.is_game_started(lobby_name)):
-        raise HTTPException(status_code=406, detail='This game has not started yet')
-    
-    await manager.game_user_connect(websocket, lobby_name, user_name)
-    try:
-        while True:
-            await manager.game_user_connection_sleep(lobby_name, user_name)
-    except WebSocketDisconnect:
-        await manager.game_user_disconnect(lobby_name, user_name)
+        await manager.disconnect(user_name) 
            
 @app.post('/create_user/')
 async def create_user(user: UserBase):
@@ -131,7 +87,8 @@ async def create_lobby(lobby: CreateLobbyBase):
         lobby_repo.create_lobby(lobby_name, min_players, max_players, password, host_name)
         total_users = lobby_repo.get_amount_users(lobby_name)
         is_private = lobby_repo.is_lobby_private(lobby_name)
-        await manager.broadcast_to_users(f"new_lobby, {lobby_name}, {total_users}, {max_players}, {is_private}")
+        manager.add_user_to_lobby(lobby_name, host_name)
+        await manager.broadcast_to_users_with_no_lobby(f"new_lobby, {lobby_name}, {total_users}, {max_players}, {is_private}")
         return {'message': 'Lobby created'}
     except Exception as e:
         print(e)
@@ -192,8 +149,9 @@ async def join_lobby(request: JoinLobbyBase):
     try:
         lobby_repo.add_user_to_lobby(lobby_name, user_name)
         total_users = lobby_repo.get_amount_users(lobby_name)
-        await manager.broadcast_to_lobby(lobby_name, f"user_connect, {user_name}")
-        await manager.broadcast_to_users(f"update_players, {lobby_name}, {total_users}")
+        await manager.broadcast_to_lobby_users(lobby_name, f"user_connect, {user_name}")
+        await manager.add_user_websocket_to_lobby(lobby_name, user_name)
+        await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
         return {'message': 'Joined lobby'}
     except Exception as e:
         print(e)
@@ -214,7 +172,7 @@ async def get_lobby_users(lobby_name: str, user_name: str):
         return lobby_repo.get_lobby_users(lobby_name)
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail='An error occurred while getting the lobby users')
+        raise HTTPException(status_code=500, detail='An error occurred while getting the lobby users')    
 
 @app.post('/leave_lobby/')
 async def leave_lobby(request: LobbyBase):
@@ -234,14 +192,16 @@ async def leave_lobby(request: LobbyBase):
     
     try:
         lobby_repo.leave_lobby(lobby_name, user_name)
+
         if (user_repo.is_user_host(lobby_name, user_name)):
-            await manager.broadcast_to_lobby(lobby_name, f"lobby_close")
-            await manager.close_lobby_connections(lobby_name)
-            await manager.broadcast_to_users(f"lobby_close, {lobby_name}")
+            await manager.broadcast_to_lobby_users(lobby_name, f"lobby_close")
+            await manager.remove_all_user_from_lobby(lobby_name)
+            await manager.broadcast_to_users_with_no_lobby(f"lobby_close, {lobby_name}")
         else:
-            await manager.broadcast_to_lobby(lobby_name, f"user_disconnect, {user_name}")
+            await manager.remove_user_from_lobby(lobby_name, user_name)
+            await manager.broadcast_to_lobby_users(lobby_name, f"user_disconnect, {user_name}")
             total_users = lobby_repo.get_amount_users(lobby_name)
-            await manager.broadcast_to_users(f"update_players, {lobby_name}, {total_users}")
+            await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
         return  {'message': 'User left lobby successfully'}
     except Exception as e:
         print(e)
@@ -269,8 +229,8 @@ async def start_game(request: LobbyBase):
 
     try:
         game_logic.start_game(lobby_name)
-        await manager.broadcast_to_lobby(lobby_name, f"game_start")
-        await manager.broadcast_to_users(f"lobby_close, {lobby_name}")
+        await manager.broadcast_to_lobby_users(lobby_name, f"game_start")
+        await manager.broadcast_to_users_with_no_lobby(f"game_start, {lobby_name}")
         return {'message': 'Game started successfully'}
     except Exception as e:
         print(e)
@@ -416,6 +376,7 @@ async def only_discard_card(lobby_name: str, user_name: str, id_card: int):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while playing the card')
 
+'''
 @app.post('/end_game/')
 async def end_game(request: LobbyBase):
     lobby_name = request.lobby_name
@@ -435,10 +396,8 @@ async def end_game(request: LobbyBase):
      
     try:
         game_logic.end_game(lobby_name)
-        await manager.broadcast_to_game(lobby_name, f"game_end")
-        await manager.close_game_connections(lobby_name)
-        await manager.close_lobby_connections(lobby_name)
         return {'message': 'Game ended successfully'}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while ending the game')
+'''

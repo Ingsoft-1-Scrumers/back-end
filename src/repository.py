@@ -17,6 +17,12 @@ class UserRepository:
         return user
     
     @db_session
+    def get_user_lobby(self, user_name: str) -> str:
+        user = self.get_user(user_name)
+        lobby = user.lobby
+        return lobby.name
+    
+    @db_session
     def get_hand(self, user_name: str) -> Set(Card):
         user = self.get_user(user_name)
         hand = user.hand
@@ -124,6 +130,11 @@ class LobbyRepository:
         return lobby
     
     @db_session
+    def set_new_host(self, lobby_name: str, new_host: User):
+        lobby = self.get_lobby(lobby_name)
+        lobby.host = new_host
+
+    @db_session
     def get_game(self, lobby_name: str) -> Game:
         lobby = self.get_lobby(lobby_name)
         game = lobby.game
@@ -206,9 +217,23 @@ class LobbyRepository:
             self.remove_all_users_from_lobby(lobby_name)
             self.remove_lobby(lobby_name)
         else:
-            user = lobby_users.select().where(name=user_name).first()
+            user = user_repo.get_user(user_name)
             lobby_users.remove(user)
     
+    @db_session
+    def remove_user_from_game(self, lobby_name: str, user_name: str):
+        user_repo = UserRepository()
+        lobby_users = self.get_lobby_set_users(lobby_name)
+
+        if user_repo.is_user_host(lobby_name, user_name):
+            user = user_repo.get_user(user_name)
+            new_host = select([lobby_users]).where(lobby_users.c.name != user_name).first()
+            self.set_new_host(lobby_name, new_host)
+            lobby_users.remove(user)
+        else:
+            user = user_repo.get_user(user_name)
+            lobby_users.remove(user)
+
     @db_session
     def can_start_game(self, lobby_name: str) -> bool:
         min_players = self.get_min_players(lobby_name)
