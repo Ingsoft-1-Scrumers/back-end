@@ -1,7 +1,5 @@
 from models import *
 from pony.orm import db_session
-from settings import CARDS_PER_USER
-from template import ALL_TEMPLATES
 
 #! Convencion: Si ya tenemos un objeto, podemos acceder a sus atributos sin usar una clase repository
 
@@ -32,6 +30,7 @@ class UserRepository:
         hand_dict = [{'id': card.id,
                     'name': card.name, 
                     'type': card.type} for card in hand]
+        hand_dict = sorted(hand_dict, key=lambda x: x.get('type', ''))
         return hand_dict
 
     @db_session
@@ -110,7 +109,7 @@ class UserRepository:
 
 class LobbyRepository:
 
-    @db_session #! No hay lobbies sin contraseña
+    @db_session
     def create_lobby(self, lobby_name: str, min_players: int, max_players: int, password: str, host_name: str):
         user_repo = UserRepository()
         host = user_repo.get_user(host_name)
@@ -167,7 +166,22 @@ class LobbyRepository:
         lobby_users = self.get_lobby_set_users(lobby_name)
         users_dict = [{'name': user.name} for user in lobby_users]
         users_dict.append({'host': self.get_host_name(lobby_name)})
+        users_dict = sorted(users_dict, key=lambda x: x.get('name', ''))
         return users_dict
+    
+    @db_session
+    def get_joinable_lobby_listings(self) -> [dict]:
+        not_started_lobbies = Lobby.select().where(game=None)
+        joinable_lobbies = []
+        for lobby in not_started_lobbies:
+            if (len(lobby.users) != lobby.max_players):
+                joinable_lobbies.append(lobby)
+        joinable_lobbies_dict = [{'name': lobby.name,
+                                  'total_players': len(lobby.users),
+                                  'max_players': lobby.max_players,
+                                  'secure': lobby.password is not None} for lobby in joinable_lobbies]
+        joinable_lobbies_dict = sorted(joinable_lobbies_dict, key=lambda x: x.get('name', ''))
+        return joinable_lobbies_dict
     
     @db_session
     def is_game_started(self, lobby_name: str) -> bool:
@@ -183,6 +197,17 @@ class LobbyRepository:
         max_players = self.get_max_players(lobby_name)
         lobby_users = self.get_lobby_set_users(lobby_name)
         return len(lobby_users) == max_players
+
+    @db_session
+    def leave_lobby(self, lobby_name: str, user_name: str):
+        user_repo = UserRepository()
+        lobby_users = self.get_lobby_set_users(lobby_name)
+        if user_repo.is_user_host(lobby_name, user_name):
+            self.remove_all_users_from_lobby(lobby_name)
+            self.remove_lobby(lobby_name)
+        else:
+            user = lobby_users.select().where(name=user_name).first()
+            lobby_users.remove(user)
     
     @db_session
     def can_start_game(self, lobby_name: str) -> bool:
@@ -194,6 +219,11 @@ class LobbyRepository:
     def is_password_correct(self, lobby_name: str, password: str) -> bool:
         lobby_password = self.get_password(lobby_name)
         return lobby_password == password
+    
+    @db_session
+    def is_lobby_private(self, lobby_name: str) -> bool:
+        lobby_password = self.get_password(lobby_name)
+        return lobby_password != "empty"
 
     @db_session
     def add_user_to_lobby(self, lobby_name: str, user_name: str):
@@ -244,6 +274,11 @@ class GameRepository:
         return game.turn
     
     @db_session
+    def get_turn_user(self, game_name: str) -> str:
+        turn = self.get_turn(game_name)
+        return turn.user.name
+    
+    @db_session
     def get_amount_players(self, game_name: str) -> int:
         game = self.get_game(game_name)
         return game.amount_players
@@ -258,6 +293,7 @@ class GameRepository:
     def get_users_position(self, game_name: str) -> [dict]:
         positions = self.get_all_positions(game_name)
         users_dict = [{'name': position.user.name, 'position': position.number} for position in positions]
+        users_dict = sorted(users_dict, key=lambda x: x.get('position', ''))
         return users_dict
     
     @db_session
@@ -284,6 +320,14 @@ class CardRepository:
         if card is None:
             raise ValueError("Card does not exist")
         return card
+    
+    @db_session
+    def get_card_dict(self, card_id: int) -> dict:
+        card = self.get_card(card_id)
+        card_dict = {'id': card.id,
+                     'name': card.name, 
+                     'type': card.type}
+        return card_dict
 
 class PositionRepository:
 
