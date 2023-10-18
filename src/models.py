@@ -6,6 +6,7 @@ db = Database()
 class User(db.Entity):
     name = PrimaryKey(str)
     is_alive = Optional(bool, default=True)
+    role = Optional(str, default="Human")
     lobby = Optional('Lobby', reverse='users')
     hosting_lobby = Optional('Lobby', reverse='host')
     position = Optional('Position')

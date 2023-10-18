@@ -36,18 +36,40 @@ class GameLogic:
     def add_cards_to_deck(self, game : Game):
         for card_created in game.all_cards:
             card_created.game_deck = game
+            
+    @db_session
+    def assign_the_thing(self, users : Set(User), game : Game):
+        the_thing_user = users.random(1)[0] #agarro user random
+        the_thing_user.role = "The thing"   #ahora es la cosa
+        the_thing_card = game.deck_cards.select(lambda card: card.name == "La cosa").first()    #buscamos la carta de la cosa en el mazo
+        the_thing_card.user_hand = the_thing_user   #le damos esa carta al user q es la cosa
+        self.remove_card_from_deck(the_thing_card)  #sacamos la carta de la cosa del mazo
+        
 
     @db_session
     def deal_cards_all_users(self, users : Set(User), game : Game):
+        self.assign_the_thing(users, game)
         for user in users:
-            for number_card in range(CARDS_PER_USER):
-                random_card = self.random_card_from_deck_ingoring_panic(game)
+            if user.role == "The thing":
+                num_cards_to_deal = CARDS_PER_USER-1
+            else:
+                num_cards_to_deal = CARDS_PER_USER
+            for number_card in range(num_cards_to_deal):
+                random_card = self.random_card_from_deck_without_panic_infection(game)
                 random_card.user_hand = user
 
     @db_session
     def random_card_from_deck_ingoring_panic(self, game : Game) -> Card:
         deck_without_panic = game.deck_cards.select(lambda card: card.type != "Panico")
         random_card = deck_without_panic.random(1)[0] 
+        self.remove_card_from_deck(random_card)
+        return random_card
+    
+    @db_session
+    def random_card_from_deck_without_panic_infection(self, game : Game) -> Card:
+        deck_to_deal = game.deck_cards.select(lambda card: card.type != "Panico"
+                                                            and card.type != "Contagio")
+        random_card = deck_to_deal.random(1)[0] 
         self.remove_card_from_deck(random_card)
         return random_card
 
@@ -128,6 +150,23 @@ class GameLogic:
             new_turn_position = game_repo.get_n_position(1, lobby_name)
         
         game.turn = new_turn_position
+        
+    #no se puede descartar la cosa, y si estas infectado si o si te tenes q quedar con 1
+    @db_session
+    def only_discard_card(self, user_name: str, id_card: int, lobby_name: str):
+        user_repo = UserRepository()
+        card_repo = CardRepository()
+        user = user_repo.get_user(user_name)
+        
+        card_to_discard = card_repo.get_card(id_card)
+        if(card_to_discard.name == "La cosa"):
+            raise ValueError("You cannot discard this card")
+        elif (card_to_discard.name == "Infectado"):
+            num_infect = len(user.hand.select(lambda card : card.name == "Infectado"))
+            if(user.role == "Infected" and num_infect == 1):
+                raise ValueError("You cannot discard this card")
+        self.discard_card_from_hand(user, id_card)
+        self.next_turn(lobby_name)
 
     @db_session
     def end_game(self, lobby_name: str):
