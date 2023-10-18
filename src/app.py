@@ -190,8 +190,8 @@ async def join_lobby(request: JoinLobbyBase):
     try:
         lobby_repo.add_user_to_lobby(lobby_name, user_name)
         total_users = lobby_repo.get_amount_users(lobby_name)
-        #await manager.broadcast_to_lobby(lobby_name, f"user_connect, {user_name}")
-        #await manager.broadcast_to_users(f"update_players, {lobby_name}, {total_users}")
+        await manager.broadcast_to_lobby(lobby_name, f"user_connect, {user_name}")
+        await manager.broadcast_to_users(f"update_players, {lobby_name}, {total_users}")
         return {'message': 'Joined lobby'}
     except Exception as e:
         print(e)
