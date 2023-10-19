@@ -150,6 +150,32 @@ class GameLogic:
             new_turn_position = game_repo.get_n_position(1, lobby_name)
         
         game.turn = new_turn_position
+
+    @db_session
+    def validate_swap_card(self, user_name: str, id_card: int, target_user_name: str) -> bool:
+        valid_result = True
+        user_repo = UserRepository()
+        card_repo = CardRepository()
+        user = user_repo.get_user(user_name)
+        target_user = user_repo.get_user(target_user_name)
+        card_to_swap = card_repo.get_card(id_card)
+        
+        if (card_to_swap.type == "Panico" or card_to_swap.name == "La cosa"):
+            valid_result = False
+        elif (card_to_swap.name == "Infectado"):
+            num_infect = len(user.hand.select(lambda card : card.name == "Infectado"))
+            if (user.role == "Human"):
+                valid_result = False
+            elif (user.role == "Infectado" and num_infect == 1):
+                valid_result = False
+            elif (user.role == "Infectado" and target_user.role != "The thing"):
+                valid_result = False
+            else:
+                pass
+        else: #otras cartas normies
+            pass
+        
+        return valid_result
         
     #no se puede descartar la cosa, y si estas infectado si o si te tenes q quedar con 1
     @db_session

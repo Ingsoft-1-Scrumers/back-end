@@ -29,6 +29,13 @@ class Game(db.Entity):
     positions = Set('Position', reverse='game')
     all_cards = Set('Card', reverse='game_associated')
     deck_cards = Set('Card', reverse='game_deck')
+    status = Required(str, default='game_not_started')
+    effect_to_be_applied = Optional(str)
+    user_target_effect = Optional(str)
+    exchange_card_user_start = Optional(int)
+    exchange_card_user_finish = Optional(int)
+    exchange_user_start = Optional(str)
+    exchange_user_target = Optional(str)
 
 class Position(db.Entity):
     user = PrimaryKey(User)

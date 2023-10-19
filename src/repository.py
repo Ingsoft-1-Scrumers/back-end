@@ -284,6 +284,16 @@ class GameRepository:
         return game 
 
     @db_session
+    def get_game_status(self, game_name: str) -> str:
+        game = self.get_game(game_name)
+        return game.status
+
+    @db_session
+    def set_game_status(self, game_name: str, status: str):
+        game = self.get_game(game_name)
+        game.status = status
+
+    @db_session
     def get_all_cards(self, game_name: str) -> Set(Card):
         game = self.get_game(game_name)
         return game.all_cards
@@ -330,6 +340,48 @@ class GameRepository:
     def remove_game(self, game_name: str):
         game = self.get_game(game_name)
         game.delete()
+
+    @db_session
+    def get_exchange_card_user_start(self, game_name: str) -> int:
+        game = self.get_game(game_name)
+        return game.exchange_card_user_start
+
+    @db_session
+    def get_exchange_card_user_finish(self, game_name: str) -> int:
+        game = self.get_game(game_name)
+        return game.exchange_card_user_finish
+
+    @db_session
+    def get_exchange_user_start(self, game_name: str) -> str:
+        game = self.get_game(game_name)
+        return game.exchange_user_start
+
+    @db_session
+    def get_exchange_user_target(self, game_name: str) -> str:
+        game = self.get_game(game_name)
+        return game.exchange_user_target
+
+    @db_session
+    def set_exchange_card_start(self, game_name: str, card_id: int):
+        game = self.get_game(game_name)
+        game.exchange_card_user_start = card_id
+
+    @db_session
+    def set_exchange_card_finish(self, game_name: str, card_id: int):
+        game = self.get_game(game_name)
+        game.exchange_card_user_finish = card_id
+
+    @db_session
+    def set_exchange_user_start(self, game_name: str, user_name: str):
+        game = self.get_game(game_name)
+        game.exchange_user_start = user_name
+
+    @db_session
+    def set_exchange_user_target(self, game_name: str, user_name: str):
+        game = self.get_game(game_name)
+        game.exchange_user_target = user_name
+
+    
     
 class CardRepository:
 
