@@ -25,7 +25,12 @@ class PlayCardBase(BaseModel):
     target_user_name: str
     card_id: int
 
-class ChooseDiscardOrPlayBase(BaseModel):
+class DefenseCardBase(BaseModel):
     lobby_name: str
     user_name: str
-    discard_or_play: str
+    card_id: int
+
+class ChoiceBase(BaseModel):
+    lobby_name: str
+    user_name: str
+    choice: str

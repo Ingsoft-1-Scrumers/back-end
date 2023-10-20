@@ -428,7 +428,7 @@ class GameRepository:
     @db_session
     def get_discard_or_play(self, game_name: str) -> str:
         game = self.get_game(game_name)
-        return game.discard_or_playor_play
+        return game.discard_or_play
 
     @db_session
     def set_effect_to_be_applied(self, game_name: str, effect: str):
@@ -436,10 +436,40 @@ class GameRepository:
         game.effect_to_be_applied = effect
 
     @db_session
-    def get_effect_to_be_applied(self, game_name: str, effect: str):
+    def get_effect_to_be_applied(self, game_name: str) -> str:
         game = self.get_game(game_name)
         return game.effect_to_be_applied
+    
+    @db_session
+    def set_target_to_be_afflicted(self, game_name: str, target: str):
+        game = self.get_game(game_name)
+        game.target_to_be_afflicted = target
 
+    @db_session
+    def get_target_to_be_afflicted(self, game_name: str) -> str:
+        game = self.get_game(game_name)
+        return game.target_to_be_afflicted
+
+    @db_session
+    def set_defense_or_skip(self, game_name: str, decison: str):
+        game = self.get_game(game_name)
+        game.defense_or_skip = decison
+
+    @db_session
+    def get_defense_or_skip(self, game_name: str) -> str:
+        game = self.get_game(game_name)
+        return game.defense_or_skip
+
+    @db_session
+    def set_defense_or_exchange(self, game_name: str, decison: str):
+        game = self.get_game(game_name)
+        game.defense_or_exchange = decison
+
+    @db_session
+    def get_defense_or_exchange(self, game_name: str) -> str:
+        game = self.get_game(game_name)
+        return game.defense_or_exchange
+    
 class CardRepository:
 
     @db_session

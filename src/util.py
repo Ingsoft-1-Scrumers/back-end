@@ -361,6 +361,19 @@ class GameLogic:
         return defense
 
     @db_session
+    def can_card_cancel_effect(self, lobby_name: str, card_name: str)-> bool:
+        card_effect = self.game_repo.get_effect_to_be_applied
+        cancel = False
+        match card_effect:
+            case "Seduccion" | "swap_card":
+                cancel = (card_name == "Aterrador") or (card_name == "No_gracias")
+            case "Cambio de lugar" | "Mas vale que corras":
+                cancel = (card_name == "Aqui estoy bien")
+            case "Lanzallamas":
+                cancel = (card_name == "Nada de barbacoas")
+        return cancel
+
+    @db_session
     def is_there_obstacle(self, lobby_name: str, user_name: str) -> bool:
         direction = self.game_repo.get_direction(lobby_name)
         if (direction):
