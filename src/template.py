@@ -3,7 +3,7 @@
 
 #CONTAGIO ---------------------------------------------------------------------
 La_cosa = {
-    "card_name" : "Cosa",   #!avisar al front
+    "card_name" : "Cosa",   #! Avisar a Front
     "card_type" : "Contagio",
     "quantity_numb_players" : [1, 1, 1, 1, 1, 1, 1, 1, 1]
 }

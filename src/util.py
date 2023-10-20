@@ -138,11 +138,6 @@ class GameLogic:
         for card in new_deck:
             card.game_deck = game
 
-    @db_session #! TENEMOS QUE VERLO EN UN RATO (TIENE QUE SETTEAR EL EFFECTO A APLICAR)
-    def play_card(self, user_name: str, id_card: int, lobby_name: str):
-        user = self.user_repo.get_user(user_name)
-        self.discard_card_from_hand(user, id_card)
-
     @db_session 
     def discard_card_from_hand(self, user: User, id_card: int):
         card_discard = self.card_repo.get_card(id_card)
@@ -381,3 +376,17 @@ class GameLogic:
         else:
             result = self.position_repo.get_left_door(user_name)
         return result
+
+    @db_session
+    def is_there_obstacle_between_players(self, lobby_name: str, user_name: str, target_user_name: str) -> bool:
+        pos_user = self.position_repo.get_numb_position(user_name)
+        pos_target = self.position_repo.get_numb_position(target_user_name)
+        amount_players = self.lobby_repo.get_amount_users
+        obstacle = False
+        if((pos_user == 1 and pos_target == amount_players) or
+            pos_user > pos_target):
+            obstacle = self.position_repo.get_left_door(user_name) and self.position_repo.get_right_door(target_user_name)
+        else:
+            obstacle = self.position_repo.get_left_door(target_user_name) and self.position_repo.get_right_door(user_name)
+
+        return obstacle

@@ -1,7 +1,6 @@
 from fastapi import WebSocket, HTTPException
 from typing import List
 
-#! TODO: Cambiar la estructura de datos para users_in_lobby y users_with_no_lobby
 class ConnectionManager:
     def __init__(self):
         self.websockets: dict[str, WebSocket] = {}

@@ -1,5 +1,3 @@
-#branch refactor
-
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from connection import ConnectionManager
@@ -18,7 +16,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#! Seduccion, Fallaste. Determinacion y Panico no son consideradas en la logica del juego todavia
+#! Cambiar la estructura de datos para users_in_lobby y users_with_no_lobby
+#! Superinfeccion no esta implementada
+#! Ver orden de los broadcast y los mensajes de send_message
+#! Refactorizar Codigo (all files)
+#! Ver que paso con los Test
+#! Hacer logica de Seduccion
+#! Logica para desconexion no esperada
+
+#! Fallaste, Determinacion y Panico no son consideradas en la logica del juego todavia
 
 async def game_flow(lobby_name : str): 
     game_repo = GameRepository()
@@ -28,32 +34,37 @@ async def game_flow(lobby_name : str):
 
     match game_status:
         case 'game_not_started':
-            game_repo.set_game_status(lobby_name, "steal_card_stage_user_turn")
+            game_repo.set_game_status(lobby_name, "steal_card_stage")
             await manager.broadcast_to_lobby_users(lobby_name, f"turn, {user_turn}")
-            await manager.send_message(user_turn, f"steal_card_stage_user_turn, {user_turn}")
-        case 'steal_card_stage_user_turn':
-            if (game_logic.can_user_play(user_turn, lobby_name)):
-                game_repo.set_game_status(lobby_name, "discard_or_play_user_turn")
-                await manager.send_message(user_turn, f"discard_or_play_user_turn, {user_turn}")
-            else:
-                game_repo.set_game_status(lobby_name, "discard_card_stage_user_turn") 
-                await manager.send_message(user_turn, f"discard_card_stage_user_turn, {user_turn}")
+            await manager.send_message(user_turn, f"steal_card_stage")
+        case 'steal_card_stage':
+            game_repo.set_game_status(lobby_name, "discard_or_play")
+            await manager.send_message(user_turn, f"discard_or_play")
 
-        case 'discard_or_play_user_turn':
+            '''
+            if (game_logic.can_user_play(user_turn, lobby_name)):
+                game_repo.set_game_status(lobby_name, "discard_or_play")
+                await manager.send_message(user_turn, f"discard_or_play")
+            else:
+                game_repo.set_game_status(lobby_name, "discard_stage") 
+                await manager.send_message(user_turn, f"discard_stage")
+            '''
+
+        case 'discard_or_play':
             if (game_repo.get_discard_or_play(lobby_name) == 'discard'):
-                game_repo.set_game_status(lobby_name, "discard_card_stage_user_turn")
+                game_repo.set_game_status(lobby_name, " discard_card_stage_user_turn")
                 await manager.send_message(user_turn, f"discard_card_stage_user_turn, {user_turn}")
             else:
                 game_repo.set_game_status(lobby_name, "play_card_stage_user_turn")
                 await manager.send_message(user_turn, f"play_card_stage_user_turn, {user_turn}")
             game_repo.set_discard_or_play(lobby_name, None)
 
-        case 'discard_card_stage_user_turn':
+        case 'discard_stage':
             user_next_turn = game_logic.next_player(lobby_name)
             superinfection = game_logic.exchange_with_superinfection(user_turn, user_next_turn)
             obstacle = game_logic.is_there_obstacle(lobby_name, user_next_turn)
 
-            if (superinfection) or (obstacle): # No hay intercamio de cartas
+            if (superinfection) or (obstacle): # No hay intercambio de cartas
                 game_repo.set_game_status(lobby_name, "steal_card_stage_user_turn")
                 await manager.send_message(user_turn, f"no_exchange, {user_turn}")
                 game_logic.next_turn(lobby_name)
@@ -72,34 +83,74 @@ async def game_flow(lobby_name : str):
                 await manager.send_message(user_turn, f"waiting_for_target_action, {target_user_name}")
                 await manager.send_message(target_user_name, f"defense_or_skip, {target_user_name}")
             else: # No se puede defender
-                # Si es una carta de seduccion, se pasa a iniciar intercambio con el target to be afflicted
-                # Aplicar Efecto
-                # Indicar que se jugo carta y lo que se jugo
-                # Determinar si hay victoria
-                # Si hay victoria, mostrar pantalla de victoria
-                # Si no hay victoria, verificar si hay intercambio de cartas
-                # Si hay intercambio de cartas, establecer el estado de intercambio de cartas
-                # Si no hay intercambio de cartas, establecer el estado de robar carta
+                #! Si es una carta de seduccion, se pasa a iniciar intercambio con el target to be afflicted
+                # TODO Aplicar Efecto
+                target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
+                effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)
+                game_repo.set_effect_to_be_applied(lobby_name, None)
+                game_repo.set_target_to_be_afflicted(lobby_name, None)
+                await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+                
+                victory = False
+                if (victory): # Hay victoria
+                    await manager.broadcast_to_lobby_users(lobby_name, f"game_over, {user_turn}")
+                    # TODO Mostrar pantalla de victoria
+                    # TODO Borrar todo
+                    await manager.remove_all_user_from_lobby(lobby_name)
+                else: # No hay victoria
+                    user_next_turn = game_logic.next_player(lobby_name)
+                    superinfection = game_logic.exchange_with_superinfection(user_turn, user_next_turn)
+                    obstacle = game_logic.is_there_obstacle(lobby_name, user_next_turn)
+
+                    if (superinfection) or (obstacle): # No hay intercamio de cartas
+                        game_repo.set_game_status(lobby_name, "steal_card_stage_user_turn")
+                        await manager.send_message(user_turn, f"no_exchange, {user_turn}")
+                        game_logic.next_turn(lobby_name)
+                        await manager.broadcast_to_lobby_users(lobby_name, f"turn, {user_next_turn}")
+                        await manager.send_message(user_next_turn, f"steal_card_stage_user_turn, {user_next_turn}")
+                    else: # Hay intercambio de cartas
+                        game_repo.set_game_status(lobby_name, "exchange_card_start")
+                        await manager.send_message(user_turn, f"exchange_card_start, {user_turn}, {user_next_turn}")
                 pass
 
         case 'defense_or_skip':
             target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
             if (game_repo.get_defense_or_skip(lobby_name) == "skip"): # No quiere defenderse
-                # Aplicar Efecto
-                # Indicar que se jugo carta y lo que se jugo
-                # Determinar si hay victoria
-                # Si hay victoria, mostrar pantalla de victoria
-                # Si no hay victoria, verificar si hay intercambio de cartas
-                # Si hay intercambio de cartas, establecer el estado de intercambio de cartas
-                # Si no hay intercambio de cartas, establecer el estado de robar carta
-                pass
+                # TODO Aplicar Efecto
+                target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
+                effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)
+                game_repo.set_effect_to_be_applied(lobby_name, None)
+                game_repo.set_target_to_be_afflicted(lobby_name, None)
+                await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+                
+                victory = False
+                if (victory): # Hay victoria
+                    await manager.broadcast_to_lobby_users(lobby_name, f"game_over, {user_turn}")
+                    # TODO Mostrar pantalla de victoria
+                    # TODO Borrar todo
+                    await manager.remove_all_user_from_lobby(lobby_name)
+                else: # No hay victoria
+                    user_next_turn = game_logic.next_player(lobby_name)
+                    superinfection = game_logic.exchange_with_superinfection(user_turn, user_next_turn)
+                    obstacle = game_logic.is_there_obstacle(lobby_name, user_next_turn)
+
+                    if (superinfection) or (obstacle): # No hay intercamio de cartas
+                        game_repo.set_game_status(lobby_name, "steal_card_stage_user_turn")
+                        await manager.send_message(user_turn, f"no_exchange, {user_turn}")
+                        game_logic.next_turn(lobby_name)
+                        await manager.broadcast_to_lobby_users(lobby_name, f"turn, {user_next_turn}")
+                        await manager.send_message(user_next_turn, f"steal_card_stage_user_turn, {user_next_turn}")
+                    else: # Hay intercambio de cartas
+                        game_repo.set_game_status(lobby_name, "exchange_card_start")
+                        await manager.send_message(user_turn, f"exchange_card_start, {user_turn}, {user_next_turn}")
+
             else: # Quiere defenderse
                 game_repo.set_game_status(lobby_name, "defend_play")
                 await manager.send_message(target_user_name, f"defend_play, {target_user_name}")
             game_repo.set_defense_or_skip(lobby_name, None)
 
         case 'defend_play':
-            # Aplicar Efecto (Defensa)
+            # TODO Aplicar Efecto (Defensa)
             target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
             game_repo.set_effect_to_be_applied(lobby_name, None)
             game_repo.set_target_to_be_afflicted(lobby_name, None)
@@ -145,7 +196,7 @@ async def game_flow(lobby_name : str):
                 await manager.send_message(user_finish, f"exchange_card_finish, {user_finish}, {user_turn}")
 
         case 'defend_exchange':
-            # Aplicar Efecto (Defensa)
+            # TODO Aplicar Efecto (Defensa)
             game_repo.set_effect_to_be_applied(lobby_name, None)
             user_finish = game_repo.get_exchange_user_finish(lobby_name)
             game_repo.clean_exchange_data(lobby_name)
@@ -163,9 +214,9 @@ async def game_flow(lobby_name : str):
             victory = False
             if (victory):
                 await manager.broadcast_to_lobby_users(lobby_name, f"game_over, {user_turn}")
-                # Mostrar pantalla de victoria
-                # Borrar todo
-                # Cerrar el lobby socket
+                # TODO Mostrar pantalla de victoria
+                # TODO Borrar todo
+                await manager.remove_all_user_from_lobby(lobby_name)
             else:
                 game_repo.set_game_status(lobby_name, "steal_card_stage_user_turn")
                 game_logic.next_turn(lobby_name)
@@ -174,9 +225,8 @@ async def game_flow(lobby_name : str):
                 await manager.send_message(user_next_turn, f"steal_card_stage_user_turn, {user_next_turn}")
 
         case 'unexpected_disconnection':
-            # Borrar todo
-            # Cerrar el lobby socket
-            pass    
+            # TODO Borrar todo
+            await manager.remove_all_user_from_lobby(lobby_name)  
 
 #! Asumimos que el usuario solo cierra pestaña cuando no esta en un lobby/partida
 @app.websocket('/websocket/{user_name}')
@@ -441,8 +491,8 @@ async def get_user_hand(lobby_name: str, user_name: str):
         raise HTTPException(status_code=500, detail='An error occurred while getting the hand')
 
 #! Despues de robar, el front tiene que pedir de nuevo la mano
-@app.get('/steal_card_from_deck/{lobby_name}') 
-async def steal_card_from_deck(lobby_name: str, user_name: str):
+@app.get('/steal_card/{lobby_name}') 
+async def steal_card(lobby_name: str, user_name: str):
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
     game_repo = GameRepository()
@@ -462,7 +512,7 @@ async def steal_card_from_deck(lobby_name: str, user_name: str):
         raise HTTPException(status_code=406, detail='This user already has 5 cards')
     
     try:
-        if (game_repo.get_game_status(lobby_name) == 'steal_card_stage_user_turn'):
+        if (game_repo.get_game_status(lobby_name) == 'steal_card_stage'):
             card_dict = game_logic.steal_card_from_deck(user_name) 
         else:   
             card_dict = game_logic.steal_card_from_deck_no_panic(user_name)
@@ -470,7 +520,7 @@ async def steal_card_from_deck(lobby_name: str, user_name: str):
         if not (user_repo.is_user_in_quarantine(user_name)):
             await manager.broadcast_to_lobby_users(lobby_name, f"steal_card, {user_name}")
         else:
-            await manager.broadcast_to_lobby_users(lobby_name, f"steal_card_with_quarantine, {user_name}, {card_dict['name']}")
+            await manager.broadcast_to_lobby_users(lobby_name, f"steal_card, {user_name}, {card_dict['name']}")
 
         game_flow(lobby_name)
     except Exception as e:
@@ -498,31 +548,6 @@ async def get_play_combinations(lobby_name: str, user_name: str):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the hand')
-
-@app.post('/choose_discard_or_play/')
-async def choose_discard_or_play(request: ChoiceBase):
-    lobby_name = request.lobby_name
-    user_name = request.user_name
-    choice = request.choice
-    user_repo = UserRepository()
-    lobby_repo = LobbyRepository()
-    game_repo = GameRepository()
-
-    if not (lobby_repo.lobby_exists(lobby_name)):
-        raise HTTPException(status_code=404, detail='This lobby name does not exist')
-    
-    if not (lobby_repo.is_game_started(lobby_name)):
-        raise HTTPException(status_code=406, detail='This game has not started yet')
-    
-    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
-        raise HTTPException(status_code=401, detail='This user is not in the lobby')
-    
-    try:
-        game_repo.set_discard_or_play(lobby_name, choice)
-        game_flow(lobby_name)
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail='An error occurred while choosing discard or play')
 
 @app.post('/choose_defense_or_skip/')
 async def choose_defense_or_skip(request: ChoiceBase):
@@ -574,6 +599,7 @@ async def choose_defense_or_exchange(request: ChoiceBase):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while choosing discard or play')
 
+#! Suponemos que el Front elige la combinacion correcta
 @app.post('/action_or_obstacule_card/')
 async def play_card(request: PlayCardBase):
     lobby_name = request.lobby_name
@@ -594,7 +620,7 @@ async def play_card(request: PlayCardBase):
     if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
         raise HTTPException(status_code=401, detail='This user is not in the lobby')
     
-    #! El target puede ser el mismo usuario o alguien mas
+    # El target puede ser el mismo usuario o alguien mas
     if not (user_repo.is_target_in_lobby(lobby_name, target_user_name)): 
         raise HTTPException(status_code=401, detail='This target user is not in the lobby')
     
@@ -605,6 +631,7 @@ async def play_card(request: PlayCardBase):
         raise HTTPException(status_code=401, detail='It is not your turn')
 
     try:
+
         card_name = card_repo.get_card_name(card_id)
         game_repo.set_effect_to_be_applied(lobby_name, card_name)
         game_repo.set_target_to_be_afflicted(lobby_name, target_user_name)
@@ -721,7 +748,6 @@ async def swap_card(request: PlayCardBase):
             game_repo.set_exchange_user_start(lobby_name, user_name)
             game_repo.set_exchange_user_finish(lobby_name, target_user_name)
             game_repo.set_effect_to_be_applied(lobby_name, "swap_card")
-            game_flow(lobby_name)
         else: # Hay intercambio iniciado
             game_repo.set_exchange_card_finish(lobby_name, card_id)
             user_start = game_repo.get_exchange_user_start(lobby_name)
@@ -742,7 +768,7 @@ async def swap_card(request: PlayCardBase):
                 card_dict = card_repo.get_card_dict(card_finish)
                 await manager.broadcast_to_lobby_users(lobby_name, f"card_swap_with_quarantine, {user_finish}, {user_start}, {card_dict['name']}")
             
-            game_flow(lobby_name)
+        game_flow(lobby_name)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail='An error occurred while swapping the card')

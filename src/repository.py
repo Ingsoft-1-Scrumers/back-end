@@ -535,3 +535,10 @@ class PositionRepository:
     @db_session
     def get_left_door(self, position: Position) -> bool:
         return position.left_door
+
+    @db_session
+    def get_numb_position(self, user_name: str) -> int:
+        user_repo = UserRepository()
+        user = user_repo.get_user(user_name)
+        pos = self.get_position(user)
+        return pos.number 
