@@ -64,8 +64,9 @@ async def game_flow(lobby_name : str, information : str):
             else:
                 pass
             '''
+            superinfection = game_logic.exchange_with_superinfection(user_turn, user_next_turn)
 
-            if (super_infection) or (obstaculo): # if lista de cartas esta vacia
+            if (superinfection) or (obstaculo): # if lista de cartas esta vacia
                 await manager.send_message(user_turn, f"no_exchange, {user_turn}")
                 game_logic.next_turn(lobby_name)
                 actual_user_turn = game_repo.get_turn_user(lobby_name)

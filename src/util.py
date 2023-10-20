@@ -201,3 +201,69 @@ class GameLogic:
         game_repo.remove_game(lobby_name)
         lobby_repo.remove_all_users_from_lobby(lobby_name)
         lobby_repo.remove_lobby(lobby_name)
+        
+    @db_session
+    def superinfection(self, user_name: str)->bool:
+        user_repo = UserRepository()
+        user_hand = user_repo.get_user_hand(user_name)
+        all_infected_cards = True
+        for card in user_hand:
+            all_infected_cards = all_infected_cards and (card.name == "Infectado")
+        return all_infected_cards
+        
+    @db_session
+    def exchange_with_superinfection(self, user_name: str, target_user_name: str)->bool:
+        user_repo = UserRepository()
+        user = user_repo.get_user(user_name)
+        target_user = user_repo.get_user(target_user_name)
+        exchange_with_superinfection = False
+        if(self.superinfection(user_name) or self.superinfection(target_user_name)):
+            if((user.role == "Infectado" and target_user.role == "The thing")
+            or (user.role == "The thing" and target_user.role == "Infectado")):
+                pass
+            else:
+                exchange_with_superinfection = True
+        else: 
+            pass
+        return exchange_with_superinfection
+    
+    
+    @db_session
+    def targets_according_card(self, user_name: str, lobby_name: str, card_name: str)->list[str]:
+        #no tiene en cuenta estado de cuarententa y puerta atrancada por el momento
+        lobby_repo = LobbyRepository()
+        all_players = lobby_repo.get_lobby_users(lobby_name).pop #sacamos el host
+        previous_user_name = previus_player(lobby_name, user_name).name
+        next_user_name = next_player(lobby_name, user_name).name
+        
+        target_users = []
+        match card_name:
+            case "Hacha":   #por el momento no hay puerta atrancada
+                pass
+            case "Determinacion": #carta muy dificil
+                pass
+            case "Mas vale que corras" | "Seduccion":   #todos posibles
+                for user in all_players:
+                    target_users.append(user["name"])
+            case "Whisky" | "Vigila tus espaldas":  #no tiene objetivo
+                target_users.append("user_name")
+            case _: #Lanzallamas, Analisis, Sospecha, Cambio de lugar, Cuarentena, Puerta trancada
+                target_users.append("previous_user_name")
+                target_users.append("next_user_name")
+            
+        return target_users
+        
+    
+    @db_session
+    def get_play_combinations(self, user_name: str, lobby_name: str)->dict:
+        user_repo = UserRepository()
+        user_hand = user_repo.get_user_hand(user_name)
+        cards_with_targets = {
+            user_hand[0].name: self.targets_according_card(user_name, lobby_name, user_hand[0].name),
+            user_hand[1].name: self.targets_according_card(user_name, lobby_name, user_hand[1].name),
+            user_hand[2].name: self.targets_according_card(user_name, lobby_name, user_hand[2].name),
+            user_hand[3].name: self.targets_according_card(user_name, lobby_name, user_hand[3].name),
+        }
+        return cards_with_targets
+        
+    
