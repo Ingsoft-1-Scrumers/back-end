@@ -24,3 +24,8 @@ class PlayCardBase(BaseModel):
     user_name: str
     target_user_name: str
     card_id: int
+
+class ChooseDiscardOrPlayBase(BaseModel):
+    lobby_name: str
+    user_name: str
+    discard_or_play: str

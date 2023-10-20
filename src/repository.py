@@ -102,6 +102,13 @@ class UserRepository:
                 result = True
                 break
         return result
+
+    @db_session
+    def add_card_to_hand(self, user_name: str, card_id: int):
+        card_repo = CardRepository()
+        user = self.get_user(user_name)
+        card = card_repo.get_card(card_id)
+        card.user_hand = user
     
     @db_session
     def get_user_game(self, user_name: str) -> Game:
@@ -112,6 +119,13 @@ class UserRepository:
             raise ValueError("User does not have a lobby")
         game = lobby_repo.get_game(lobby.name)
         return game
+
+    @db_session
+    def is_user_in_quarantine(self, user_name: str) -> bool:
+        user = self.get_user(user_name)
+        return user.quarantine
+
+    
 
 class LobbyRepository:
 
@@ -177,6 +191,13 @@ class LobbyRepository:
         lobby_users = self.get_lobby_set_users(lobby_name)
         users_dict = [{'name': user.name} for user in lobby_users]
         users_dict.append({'host': self.get_host_name(lobby_name)})
+        users_dict = sorted(users_dict, key=lambda x: x.get('name', ''))
+        return users_dict
+    
+    @db_session 
+    def get_lobby_users_no_host(self, lobby_name: str) -> [dict]:
+        lobby_users = self.get_lobby_set_users(lobby_name)
+        users_dict = [{'name': user.name} for user in lobby_users]
         users_dict = sorted(users_dict, key=lambda x: x.get('name', ''))
         return users_dict
     
@@ -342,6 +363,11 @@ class GameRepository:
         game.delete()
 
     @db_session
+    def is_there_exchange_offer(self, lobby_name: str) -> bool:
+        game = self.get_game(lobby_name)
+        return game.exchange_card_user_start is not None
+
+    @db_session
     def get_exchange_card_user_start(self, game_name: str) -> int:
         game = self.get_game(game_name)
         return game.exchange_card_user_start
@@ -357,9 +383,9 @@ class GameRepository:
         return game.exchange_user_start
 
     @db_session
-    def get_exchange_user_target(self, game_name: str) -> str:
+    def get_exchange_user_finish(self, game_name: str) -> str:
         game = self.get_game(game_name)
-        return game.exchange_user_target
+        return game.exchange_user_finish
 
     @db_session
     def set_exchange_card_start(self, game_name: str, card_id: int):
@@ -377,12 +403,43 @@ class GameRepository:
         game.exchange_user_start = user_name
 
     @db_session
-    def set_exchange_user_target(self, game_name: str, user_name: str):
+    def set_exchange_user_finish(self, game_name: str, user_name: str):
         game = self.get_game(game_name)
-        game.exchange_user_target = user_name
+        game.exchange_user_finish = user_name
 
-    
-    
+    @db_session
+    def clean_exchange_data(self, game_name: str):
+        game = self.get_game(game_name)
+        game.exchange_user_start = None
+        game.exchange_user_finish = None
+        game.exchange_card_user_start = None
+        game.exchange_card_user_finish = None
+
+    @db_session
+    def get_direction(self, game_name: str) -> bool:
+        game = self.get_game(game_name)
+        return game.direction
+
+    @db_session
+    def set_discard_or_play(self, game_name: str, decison: str):
+        game = self.get_game(game_name)
+        game.discard_or_play = decison
+
+    @db_session
+    def get_discard_or_play(self, game_name: str) -> str:
+        game = self.get_game(game_name)
+        return game.discard_or_playor_play
+
+    @db_session
+    def set_effect_to_be_applied(self, game_name: str, effect: str):
+        game = self.get_game(game_name)
+        game.effect_to_be_applied = effect
+
+    @db_session
+    def get_effect_to_be_applied(self, game_name: str, effect: str):
+        game = self.get_game(game_name)
+        return game.effect_to_be_applied
+
 class CardRepository:
 
     @db_session
@@ -405,9 +462,46 @@ class CardRepository:
                      'name': card.name, 
                      'type': card.type}
         return card_dict
+    
+    @db_session
+    def get_card_name(self, card_id: int) -> str:
+        card = self.get_card(card_id)
+        return card.name
 
 class PositionRepository:
 
     @db_session
     def create_position(self, user: User, number: int, game: Game):
         Position(user=user, number=number, game=game)
+
+    @db_session
+    def get_number(self, position: Position) -> int:
+        return position.number
+
+    @db_session
+    def set_position(self, position: Position, number: int):
+        position.number = number
+
+    @db_session
+    def get_user(self, position: Position) -> User:
+        return position.user
+    
+    @db_session
+    def get_position(self, user: User) -> Position:
+        position = Position.get(user=user)
+        if position is None:
+            raise ValueError("Position does not exist")
+        return position
+    
+    @db_session
+    def remove_position(self, user: User):
+        position = self.get_position(user)
+        position.delete()
+
+    @db_session
+    def get_right_door(self, position: Position) -> bool:
+        return position.right_door
+    
+    @db_session
+    def get_left_door(self, position: Position) -> bool:
+        return position.left_door
