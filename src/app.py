@@ -23,6 +23,8 @@ app.add_middleware(
 #! Ver que paso con los Test
 #! Hacer logica de Seduccion
 #! Logica para desconexion no esperada
+#! chequear puertas atrancadas despues de eliminar un jugador
+#! verificar victoria
 
 #! Fallaste, Determinacion y Panico no son consideradas en la logica del juego todavia
 

@@ -286,7 +286,6 @@ class GameLogic:
 
     @db_session
     def targets_according_action_obstacle_card(self, user_name: str, lobby_name: str, card_name: str) -> list[str]:
-        #! No tiene en cuenta estado de cuarententa y puerta atrancada por el momento
         lobby_repo = LobbyRepository()
         all_players = lobby_repo.get_lobby_users_no_host(lobby_name)
         previous_user_name = self.previous_player(lobby_name, user_name).name
@@ -294,19 +293,39 @@ class GameLogic:
         
         target_users = []
         match card_name:
-            case "Hacha":   # No hay puerta atrancada ni cuarentena
-                pass
+            case "Hacha":   
+                if(self.user_repo.is_user_in_quarantine(user_name)):    #si estoy en cuarentena, puedo jugar esta carta sobre mi mismo
+                    target_users.append(user_name)
+                #si hay puerta atrancada entre yo y un jugador adyacente, juego esa carta sobre el jugador para sacar la puerta
+                if(self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)):
+                    target_users.append(next_user_name)
+                if(self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)):
+                    target_users.append(previous_user_name)
             case "Determinacion": # Todavia no se implementa
                 pass
-            case "Mas vale que corras" | "Seduccion": # Todos menos el que la juega
+            case "Mas vale que corras": #no puede con los que están en cuarentena
+                for user in all_players:
+                    if(not self.user_repo.is_user_in_quarantine((user["name"]))):
+                        target_users.append(user["name"])
+                target_users.remove(user_name)
+            case "Seduccion": # Todos menos el que la juega
                 for user in all_players:
                     target_users.append(user["name"])
                 target_users.remove(user_name)
             case "Whisky" | "Vigila tus espaldas":  # El que juega o el flujo de juego
                 target_users.append(user_name)
-            case "Lanzallamas" | "Analisis" | "Sospecha" | "Cambio de lugar" | "Cuarentena" | "Puerta trancada": # Usuarios adyacentes
-                target_users.append(previous_user_name)
-                target_users.append(next_user_name)
+            case "Lanzallamas" | "Analisis" | "Sospecha" | "Cuarentena" | "Puerta trancada": # Usuarios adyacentes
+                if(not self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)):
+                    target_users.append(next_user_name)
+                if(not self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)):
+                    target_users.append(previous_user_name)
+            case "Cambio de lugar":
+                if(not (self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)
+                   or self.user_repo.is_user_in_quarantine(next_user_name))):
+                    target_users.append(next_user_name)
+                if(not (self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)
+                        or self.user_repo.is_user_in_quarantine(previous_user_name))):
+                    target_users.append(previous_user_name)
             
         return target_users
         
