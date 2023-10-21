@@ -18,16 +18,17 @@ app.add_middleware(
 
 #! Must be implemented
 # Revisar Connection.py (Manuel)
+# Logica Desconexion no esperada (Manuel)
 # Verificar victoria
 # Juntar las partes
 
 #! Si llegamos
 # Puerta atrancada (Accion)
 # Infección
-# Seduccion
+# Seduccion (ya esta creo)
 # Hacha
 # Revisar codigo dado las nuevas Cartas
-# Refactorizar codigo
+# Refactorizar codigo (juntar los repos)
 # Tests
 
 #! Si nos da el tiempo
@@ -55,14 +56,14 @@ async def applied_effect(lobby_name : str):
     game_logic = GameLogic()
     user_turn = game_repo.get_turn_user(lobby_name)
     target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
-    effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)
+    effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)#! no es mejor pasarlo como argumento desde gameflow???
     
     if (effect_to_be_applied == "Seduccion"): 
         user_finish = target_user_name
     else:
         user_finish = game_logic.next_player(lobby_name)
           
-    # TODO Aplicar Efecto
+    game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
     game_repo.set_effect_to_be_applied(lobby_name, None)
     game_repo.set_target_to_be_afflicted(lobby_name, None)
     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
@@ -204,7 +205,6 @@ async def game_flow(lobby_name : str):
             # TODO Borrar todo
             await manager.remove_all_user_from_lobby(lobby_name)  
 
-#! Asumimos que el usuario solo cierra pestaña cuando no esta en un lobby/partida
 @app.websocket('/websocket/{user_name}')
 async def lobby_listing(websocket: WebSocket, user_name: str):
     user_repo = UserRepository()
@@ -293,17 +293,13 @@ async def is_lobby_exist(lobby_name: str):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while checking if lobby exist')
 
-@app.get('/joinable_lobbies/') #! Cambiar atributo
-async def get_joinable_lobbies(user_name: str):
+@app.get('/joinable_lobbies/')
+async def get_joinable_lobbies():
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
-
-    if not (user_repo.user_exists(user_name)):
-        raise HTTPException(status_code=404, detail='This user does not exist')
     
     try:
-        joinable_lobbies = lobby_repo.get_joinable_lobby_listings()
-        return joinable_lobbies
+        return lobby_repo.get_joinable_lobby_listings()
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the joinable lobbies')
@@ -462,8 +458,8 @@ async def get_user_hand(lobby_name: str, user_name: str):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the hand')
 
-#! Este endpoint debe devolver info de la carta
-@app.get('/play_combinations/{lobby_name}/{user_name}') 
+#! Este endpoint debe devolver toda la info de la mano del usuario
+@app.get('/user_cards_info/{lobby_name}/{user_name}') 
 async def get_play_combinations(lobby_name: str, user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
