@@ -125,7 +125,20 @@ class UserRepository:
         user = self.get_user(user_name)
         return user.quarantine
 
-    
+    @db_session
+    def set_user_in_quarantine_true(self, user_name: str):
+        user = self.get_user(user_name)
+        user.quarantine = True
+
+    @db_session
+    def set_user_in_quarantine_false(self, user_name: str):
+        user = self.get_user(user_name)
+        user.quarantine = False
+
+    @db_session
+    def infect_effect(self, user_name: str):
+        user = self.get_user(user_name)
+        user.role = "Infectado"
 
 class LobbyRepository:
 
@@ -288,6 +301,7 @@ class LobbyRepository:
     def remove_lobby(self, lobby_name: str):
         lobby = self.get_lobby(lobby_name)
         lobby.delete()
+
 
 class GameRepository:
 
@@ -535,6 +549,14 @@ class PositionRepository:
     @db_session
     def get_left_door(self, position: Position) -> bool:
         return position.left_door
+
+    @db_session
+    def set_right_door(self, position: Position):
+        position.right_door = True
+
+    @db_session
+    def set_left_door(self, position: Position):
+        position.left_door = True
 
     @db_session
     def get_numb_position(self, user_name: str) -> int:
