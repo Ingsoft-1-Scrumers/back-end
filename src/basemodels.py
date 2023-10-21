@@ -25,7 +25,7 @@ class PlayCardBase(BaseModel):
     target_user_name: str
     card_id: int
 
-class DefenseCardBase(BaseModel):
+class CardBase(BaseModel):
     lobby_name: str
     user_name: str
     card_id: int

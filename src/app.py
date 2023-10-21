@@ -287,7 +287,7 @@ async def is_lobby_exist(lobby_name: str):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while checking if lobby exist')
 
-@app.get('/joinable_lobbies/')
+@app.get('/joinable_lobbies/') #! Cambiar atributo
 async def get_joinable_lobbies(user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
@@ -340,15 +340,11 @@ async def join_lobby(request: JoinLobbyBase):
         raise HTTPException(status_code=500, detail='An error occurred while joining the lobby')
 
 @app.get('/lobby_users/{lobby_name}')
-async def get_lobby_users(lobby_name: str, user_name: str):
+async def get_lobby_users(lobby_name: str):
     lobby_repo = LobbyRepository()
-    user_repo = UserRepository()
     
     if not (lobby_repo.lobby_exists(lobby_name)):
         raise HTTPException(status_code=404, detail='This lobby name does not exist')
-    
-    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
-        raise HTTPException(status_code=401, detail='This user is not in the lobby')
     
     try:
         return lobby_repo.get_lobby_users(lobby_name)
@@ -482,8 +478,10 @@ async def get_play_combinations(lobby_name: str, user_name: str):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the hand')
 
-@app.get('/steal_card/{lobby_name}') #! Cambiar a POST?
-async def steal_card(lobby_name: str, user_name: str):
+@app.post('/steal_card/')
+async def steal_card(request: LobbyBase):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
     game_repo = GameRepository()
@@ -519,7 +517,10 @@ async def steal_card(lobby_name: str, user_name: str):
         raise HTTPException(status_code=500, detail='An error occurred while stealing a card')
 
 @app.post('/discard_card/')
-async def discard_card(lobby_name: str, user_name: str, id_card: int):
+async def discard_card(request: CardBase):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
+    id_card = request.card_id
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
     card_repo = CardRepository()
@@ -653,7 +654,7 @@ async def defend_or_exchange(request: ChoiceBase):
         raise HTTPException(status_code=500, detail='An error occurred while choosing defend or exchange')
 
 @app.post('/defense_card/')
-async def defense_card(request: DefenseCardBase):
+async def defense_card(request: CardBase):
     lobby_name = request.lobby_name
     user_name = request.user_name
     card_id = request.card_id
