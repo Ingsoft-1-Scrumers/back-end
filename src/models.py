@@ -31,13 +31,17 @@ class Game(db.Entity):
     all_cards = Set('Card', reverse='game_associated')
     deck_cards = Set('Card', reverse='game_deck')
     direction = Required(bool, default=True)
+    
     status = Required(str, default='game_not_started')
     discard_or_play = Optional(str)
-    defense_or_skip = Optional(str)
-    defense_or_exchange = Optional(str)
+    defend_or_skip = Optional(str)
+    defend_or_exchange = Optional(str)
+
     effect_to_be_applied = Optional(str)
     target_to_be_afflicted = Optional(str)
+    
     user_target_effect = Optional(str)
+
     exchange_card_user_start = Optional(int)
     exchange_card_user_finish = Optional(int)
     exchange_user_start = Optional(str)

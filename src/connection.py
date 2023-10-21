@@ -79,5 +79,3 @@ class ConnectionManager:
         
         for user_name in self.users_in_lobby[lobby_name]:
             self.remove_user_from_lobby(lobby_name, user_name)
-        
-        self.users_in_lobby.pop(lobby_name)

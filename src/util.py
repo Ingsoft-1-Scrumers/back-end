@@ -206,7 +206,6 @@ class GameLogic:
         self.user_repo.add_card_to_hand(user_finish, card_to_user_finish_id)
         self.discard_card(user_finish, card_to_user_start_id)
         self.user_repo.add_card_to_hand(user_start, card_to_user_start_id)
-        self.game_repo.clean_exchange_data(lobby_name)
         
     @db_session
     def can_card_be_discarded(self, user_name: str, id_card: int) -> bool:

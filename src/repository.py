@@ -451,24 +451,24 @@ class GameRepository:
         return game.target_to_be_afflicted
 
     @db_session
-    def set_defense_or_skip(self, game_name: str, decison: str):
+    def set_defend_or_skip(self, game_name: str, decison: str):
         game = self.get_game(game_name)
-        game.defense_or_skip = decison
+        game.defend_or_skip = decison
 
     @db_session
-    def get_defense_or_skip(self, game_name: str) -> str:
+    def get_defend_or_skip(self, game_name: str) -> str:
         game = self.get_game(game_name)
-        return game.defense_or_skip
+        return game.defend_or_skip
 
     @db_session
-    def set_defense_or_exchange(self, game_name: str, decison: str):
+    def set_defend_or_exchange(self, game_name: str, decison: str):
         game = self.get_game(game_name)
-        game.defense_or_exchange = decison
+        game.defend_or_exchange = decison
 
     @db_session
-    def get_defense_or_exchange(self, game_name: str) -> str:
+    def get_defend_or_exchange(self, game_name: str) -> str:
         game = self.get_game(game_name)
-        return game.defense_or_exchange
+        return game.defend_or_exchange
     
 class CardRepository:
 
