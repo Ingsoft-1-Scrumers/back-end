@@ -1,11 +1,10 @@
 from fastapi import WebSocket, HTTPException
-from typing import List
 
 class ConnectionManager:
     def __init__(self):
         self.websockets: dict[str, WebSocket] = {}
-        self.users_with_no_lobby: [str] = []
-        self.users_in_lobby: dict[str, List[str]] = {}
+        self.users_with_no_lobby: {str} = {}
+        self.users_in_lobby: dict[str, {str}] = {}
 
     async def connect(self, websocket: WebSocket, user_name: str):
         await websocket.accept()
@@ -14,14 +13,22 @@ class ConnectionManager:
             raise HTTPException(status_code= 400, detail= "User WebSocket already exists")
         
         self.websockets[user_name] = websocket
-        self.users_with_no_lobby.append(user_name)
+        self.users_with_no_lobby.add(user_name)
 
-    async def disconnect(self, user_name: str):
+    def disconnect(self, user_name: str):
         if user_name not in self.websockets:
             raise Exception("User WebSocket does not exist")
         
         self.websockets.pop(user_name)
-        self.users_with_no_lobby.remove(user_name)
+        if user_name in self.users_with_no_lobby:
+            self.users_with_no_lobby.remove(user_name)
+        else:
+            for lobby_name in self.users_in_lobby.keys():
+                if user_name in self.users_in_lobby[lobby_name]:
+                    self.users_in_lobby[lobby_name].remove(user_name)
+                    if len(self.users_in_lobby[lobby_name]) == 0:
+                        self.users_in_lobby.pop(lobby_name)
+                    break
 
     async def send_message(self, user_name: str, message: str):
         if user_name not in self.websockets:
@@ -41,19 +48,17 @@ class ConnectionManager:
         for user_name in self.users_with_no_lobby:
             await self.send_message(user_name, message)
 
-    async def add_user_to_lobby(self, lobby_name: str, user_name: str):
+    def add_user_to_lobby(self, lobby_name: str, user_name: str):
         if user_name not in self.users_with_no_lobby:
             raise Exception("User does not exist")
         
-        self.users_with_no_lobby.remove(user_name)
-
         if lobby_name not in self.users_in_lobby:
-            self.users_in_lobby[lobby_name] = []
+            self.users_in_lobby[lobby_name] = {}
         
         self.users_with_no_lobby.remove(user_name)
-        self.users_in_lobby[lobby_name].append(user_name)
+        self.users_in_lobby[lobby_name].add(user_name)
 
-    async def remove_user_from_lobby(self, lobby_name: str, user_name: str):
+    def remove_user_from_lobby(self, lobby_name: str, user_name: str):
         if lobby_name not in self.users_in_lobby:
             raise Exception("Lobby does not exist")
         
@@ -61,7 +66,7 @@ class ConnectionManager:
             raise Exception("User does not exist in Lobby")
         
         self.users_in_lobby[lobby_name].remove(user_name)
-        self.users_with_no_lobby.append(user_name)
+        self.users_with_no_lobby.add(user_name)
 
         if len(self.users_in_lobby[lobby_name]) == 0:
             self.users_in_lobby.pop(lobby_name)
@@ -73,7 +78,7 @@ class ConnectionManager:
         for user_name in self.users_in_lobby[lobby_name]:
             self.send_message(user_name, message)
 
-    async def remove_all_user_from_lobby(self, lobby_name: str):
+    def remove_all_user_from_lobby(self, lobby_name: str):
         if lobby_name not in self.users_in_lobby:
             raise Exception("Lobby does not exist")
         
