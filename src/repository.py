@@ -53,6 +53,14 @@ class UserRepository:
                     'type': card.type} for card in hand]
         hand_dict = sorted(hand_dict, key=lambda x: x.get('type', ''))
         return hand_dict
+    
+    @db_session
+    def get_user_hand_int(self, user_name: str) -> [int]:
+        hand = self.get_hand(user_name)
+        result = []
+        for card in hand:
+            result.append(card.id)
+        return result
 
     @db_session
     def get_total_cards(self, user_name: str) -> int:
@@ -154,6 +162,15 @@ class UserRepository:
     def infect_effect(self, user_name: str):
         user = self.get_user(user_name)
         user.role = "Infectado"
+
+    @db_session
+    def user_death(self, user_name: str):
+        position_repo = PositionRepository()
+        user = self.get_user(user_name)
+        user.is_alive = False
+        user.lobby = None
+        #user.position = None
+        position_repo.remove_position(user)
 
 class LobbyRepository:
 
@@ -315,6 +332,13 @@ class LobbyRepository:
         user = user_repo.get_user(user_name)
         lobby_users = self.get_lobby_set_users(lobby_name)
         lobby_users.add(user)
+
+    @db_session
+    def change_host(self, lobby_name: str, user_name: str):
+        user_repo = UserRepository()
+        user = user_repo.get_user(user_name)
+        lobby = self.get_lobby(lobby_name)
+        lobby.host = user
 
     @db_session
     def remove_all_users_from_lobby(self, lobby_name: str):

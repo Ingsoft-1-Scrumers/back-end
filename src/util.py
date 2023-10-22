@@ -315,16 +315,26 @@ class GameLogic:
         self.user_repo.add_card_to_hand(user_finish, card_to_user_finish_id)
         self.discard_card(user_finish, card_to_user_start_id)
         self.user_repo.add_card_to_hand(user_start, card_to_user_start_id)
-        self.swap_with_infect_effect(card_to_user_finish_id, card_to_user_start_id, user_start, user_finish)
+        self.swap_with_infect_effect(lobby_name, card_to_user_finish_id, card_to_user_start_id, user_start, user_finish)
 
     @db_session
-    def swap_with_infect_effect(self, card_start_id: int, card_finish_id: int, user_start: str, user_finish: str):
+    def swap_with_infect_effect(self, lobby_name :str, card_start_id: int, card_finish_id: int, user_start: str, user_finish: str):
         card_start = self.card_repo.get_card_name(card_start_id)
         card_finish = self.card_repo.get_card_name(card_finish_id)
-        if(card_start == "Infectado"):
+        more_than_one_human = self.more_than_one_human(lobby_name)
+        if(card_start == "Infectado" and more_than_one_human):
             self.user_repo.infect_effect(user_finish)
-        elif(card_finish == "Infectado"):
+        elif(card_finish == "Infectado" and more_than_one_human):
             self.user_repo.infect_effect(user_start)
+
+    @db_session
+    def more_than_one_human(self, lobby_name: str) -> bool:
+        users = self.lobby_repo.get_lobby_set_users(lobby_name)
+        humans = 0
+        for user in users:
+            if (user.role == "Humano"):
+                humans += 1
+        return humans > 1
         
     @db_session
     def can_card_be_discarded(self, user_name: str, id_card: int) -> bool:
@@ -575,9 +585,10 @@ class GameLogic:
             for user in users:
                 if (user.role == "Humano"):
                     winners.append(user.name)
-        else: #gana cosa e infectados (todos los user de la partida)
+        else:
             for user in users:
-                winners.append(user.name)
+                if (user.role != "Humano"):
+                    winners.append(user.name)
         return winners
     
     '''
