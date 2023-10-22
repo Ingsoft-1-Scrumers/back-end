@@ -66,13 +66,13 @@ async def applied_effect(lobby_name : str):
     game_repo.set_target_to_be_afflicted(lobby_name, None)
     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
 
-    victory = False # Metodo verificar victoria ---- hay_victoria(list)->bool
+    victory = False # Metodo verificar victoria 
     if (victory):
         await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
         # TODO Mostrar pantalla de victoria
-        # Informacion final de la partida --- resumen_partida -> list[]
+        # Informacion final de la partida 
         # TODO Borrar Lobby
-        manager.remove_all_user_from_lobby(lobby_name)
+        await manager.remove_all_user_from_lobby(lobby_name)
     else:
         await exchange_stage(lobby_name, user_turn, user_finish)
 
@@ -195,61 +195,68 @@ async def game_flow(lobby_name : str):
                 await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
                 # TODO Mostrar pantalla de victoria
                 # TODO Borrar Lobby
-                manager.remove_all_user_from_lobby(lobby_name)
+                await manager.remove_all_user_from_lobby(lobby_name)
             else:
                 await end_turn(lobby_name)
 
         case 'unexpected_disconnection':
             # TODO Borrar todo
-            manager.remove_all_user_from_lobby(lobby_name)  
+            await manager.remove_all_user_from_lobby(lobby_name)  
 
-@app.websocket('/websocket/')
-async def lobby_listing(websocket: WebSocket):
+@app.websocket('/websocket/{user_name}')
+async def lobby_listing(websocket: WebSocket, user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
 
-    await websocket.accept()
-    await websocket.send_text("connection_established")
-    user_name =  await websocket.receive_text()
-    manager.connect(websocket, user_name)
-
+    await manager.connect(websocket, user_name)
     try:
         while True:
+            pass
             message = await manager.receive_message(user_name)
-            lobby_name = user_repo.get_user_lobby(user_name)
+            is_in_lobby = user_repo.is_user_in_a_lobby(user_name)
 
-            if (lobby_name is not None):
+            if (is_in_lobby):
+                lobby_name = user_repo.get_user_lobby(user_name)
                 await manager.broadcast_to_lobby_users(lobby_name, f"chat_msg, {user_name}, {message}")
             else:
                 raise HTTPException(status_code=401, detail='This user is not in a lobby')
             
     except WebSocketDisconnect: #! Logica para desconexion no esperada
 
-        lobby_name = user_repo.get_user_lobby(user_name)
+        is_in_lobby = user_repo.is_user_in_a_lobby(user_name)
 
-        if (lobby_name is None):
-            manager.disconnect(user_name)
-            # TODO Borrar Usuario
-        elif (lobby_name is not None and lobby_repo.is_game_started(lobby_name)):
-            manager.disconnect(user_name)
-            await manager.broadcast_to_lobby_users(lobby_name, f"user_disconnect_in_game, {user_name}")
-            manager.remove_all_user_from_lobby(lobby_name)
-            # TODO Borrar Lobby
-            # TODO Borrar Usuario
+        if (not is_in_lobby):
+            await manager.disconnect(user_name)
+            user_repo.remove_user(user_name)
         else:
-            manager.disconnect(user_name)
-            lobby_repo.leave_lobby(lobby_name, user_name)
+            lobby_name = user_repo.get_user_lobby(user_name)
 
-            if (user_repo.is_user_host(lobby_name, user_name)):
-                await manager.broadcast_to_lobby_users(lobby_name, f"lobby_close")
-                manager.remove_all_user_from_lobby(lobby_name)
-                await manager.broadcast_to_users_with_no_lobby(f"lobby_close, {lobby_name}")
+            if (lobby_repo.is_game_started(lobby_name)):
+                await manager.disconnect(user_name)
+                await manager.broadcast_to_lobby_users(lobby_name, f"user_disconnect_in_game, {user_name}")
+                await manager.remove_all_user_from_lobby(lobby_name)
+                lobby_repo.remove_lobby(lobby_name)
+                user_repo.remove_user(user_name)
             else:
-                total_users = lobby_repo.get_amount_users(lobby_name)
-                await manager.broadcast_to_lobby_users(lobby_name, f"user_disconnect, {user_name}")
-                await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
-
-            # TODO Borrar Usuario
+    
+                if (user_repo.is_user_host(lobby_name, user_name) and lobby_repo.get_amount_users(lobby_name) == 1):
+                    lobby_repo.leave_lobby(lobby_name, user_name)
+                    await manager.disconnect(user_name)
+                    await manager.broadcast_to_users_with_no_lobby(f"lobby_close, {lobby_name}")
+                elif (user_repo.is_user_host(lobby_name, user_name)):
+                    lobby_repo.leave_lobby(lobby_name, user_name)
+                    await manager.disconnect(user_name)
+                    await manager.broadcast_to_lobby_users(lobby_name, f"lobby_close")
+                    await manager.remove_all_user_from_lobby(lobby_name)
+                    await manager.broadcast_to_users_with_no_lobby(f"lobby_close, {lobby_name}")
+                else:
+                    lobby_repo.leave_lobby(lobby_name, user_name)
+                    await manager.disconnect(user_name)
+                    await manager.broadcast_to_lobby_users(lobby_name, f"user_disconnect, {user_name}")
+                    total_users = lobby_repo.get_amount_users(lobby_name)
+                    await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
+                    
+                user_repo.remove_user(user_name)
 
 @app.post('/create_user/')
 async def create_user(user: UserBase):
@@ -300,7 +307,7 @@ async def create_lobby(lobby: CreateLobbyBase):
         lobby_repo.create_lobby(lobby_name, min_players, max_players, password, host_name)
         total_users = lobby_repo.get_amount_users(lobby_name)
         is_private = lobby_repo.is_lobby_private(lobby_name)
-        manager.add_user_to_lobby(lobby_name, host_name)
+        await manager.add_user_to_lobby(lobby_name, host_name)
         await manager.broadcast_to_users_with_no_lobby(f"new_lobby, {lobby_name}, {total_users}, {max_players}, {is_private}")
         return {'message': 'Lobby created'}
     except Exception as e:
@@ -359,7 +366,7 @@ async def join_lobby(request: JoinLobbyBase):
         lobby_repo.add_user_to_lobby(lobby_name, user_name)
         total_users = lobby_repo.get_amount_users(lobby_name)
         await manager.broadcast_to_lobby_users(lobby_name, f"user_connect, {user_name}")
-        manager.add_user_to_lobby(lobby_name, user_name)
+        await manager.add_user_to_lobby(lobby_name, user_name)
         await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
         return {'message': 'Joined lobby'}
     except Exception as e:
@@ -396,16 +403,22 @@ async def leave_lobby(request: LobbyBase):
         raise HTTPException(status_code=406, detail='This game has already started')
     
     try:
-        lobby_repo.leave_lobby(lobby_name, user_name)
-
-        if (user_repo.is_user_host(lobby_name, user_name)):
+        
+        if (user_repo.is_user_host(lobby_name, user_name) and lobby_repo.get_amount_users(lobby_name) == 1):
+            lobby_repo.leave_lobby(lobby_name, user_name)
+            await manager.remove_all_user_from_lobby(lobby_name)
+            await manager.broadcast_to_users_with_no_lobby(f"lobby_close, {lobby_name}")
+        elif (user_repo.is_user_host(lobby_name, user_name)):
+            lobby_repo.leave_lobby(lobby_name, user_name)
+            await manager.remove_user_from_lobby(lobby_name, user_name)
             await manager.broadcast_to_lobby_users(lobby_name, f"lobby_close")
-            manager.remove_all_user_from_lobby(lobby_name)
+            await manager.remove_all_user_from_lobby(lobby_name)
             await manager.broadcast_to_users_with_no_lobby(f"lobby_close, {lobby_name}")
         else:
-            total_users = lobby_repo.get_amount_users(lobby_name)
-            manager.remove_user_from_lobby(lobby_name, user_name)
+            lobby_repo.leave_lobby(lobby_name, user_name)
+            await manager.remove_user_from_lobby(lobby_name, user_name)
             await manager.broadcast_to_lobby_users(lobby_name, f"user_disconnect, {user_name}")
+            total_users = lobby_repo.get_amount_users(lobby_name)
             await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
             
         return  {'message': 'User left lobby successfully'}

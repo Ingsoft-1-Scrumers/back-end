@@ -10,6 +10,11 @@ class UserRepository:
         User(name=user_name)
 
     @db_session
+    def remove_user(self, user_name: str):
+        user = self.get_user(user_name)
+        user.delete()
+
+    @db_session
     def get_user(self, user_name: str) -> User:
         user = User.get(name=user_name)
         if user is None:
