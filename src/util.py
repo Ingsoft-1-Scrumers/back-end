@@ -31,6 +31,7 @@ def cambio_de_lugar(game_name: str, user_name: str, target_user_name: str):
 def analisis(game_name: str, user_name: str, target_user_name: str):
     pass
 
+@db_session
 def hacha(game_name: str, user_name: str, target_user_name: str):
     user_repo = UserRepository()
     position_repo = PositionRepository()
@@ -41,16 +42,19 @@ def hacha(game_name: str, user_name: str, target_user_name: str):
         user_repo.set_user_in_quarantine_false(target_user_name)
     else:
         if(game_logic.is_there_obstacle_between_players(game_name, user_name, target_user_name)):
-            pos_user = position_repo.get_numb_position(user_name)
-            pos_target = position_repo.get_numb_position(target_user_name)
+            pos_user_numb = position_repo.get_numb_position(user_name)
+            pos_target_numb = position_repo.get_numb_position(target_user_name)
             amount_players = lobby_repo.get_amount_users(game_name)
-            if((pos_user == 1 and pos_target == amount_players) or
-                pos_user > pos_target):
-                position_repo.get_left_door(user_name, False)
-                position_repo.get_right_door(target_user_name, False)
+            pos_user = position_repo.get_position_user_name(user_name)
+            pos_target = position_repo.get_position_user_name(target_user_name)
+
+            if((pos_user_numb == 1 and pos_target_numb == amount_players) or
+                pos_user_numb > pos_target_numb):
+                position_repo.set_left_door(pos_user, False)
+                position_repo.set_right_door(pos_target, False)
             else:
-                position_repo.get_left_door(target_user_name, False)
-                position_repo.get_right_door(user_name, False)
+                position_repo.set_left_door(pos_target, False)
+                position_repo.set_right_door(pos_user, False)
 
 
 def sospecha(game_name: str, user_name: str, target_user_name: str):
@@ -76,17 +80,16 @@ def puerta_atrancada(game_name: str, user_name: str, target_user_name: str):
     pos_user = position_repo.get_numb_position(user_name)
     pos_target = position_repo.get_numb_position(target_user_name)
     amount_players = lobby_repo.get_amount_users(game_name)
-    user_pos = position_repo.get_position(user_name)
-    target_pos = position_repo.get_position(target_user_name)
+    user_pos = position_repo.get_position_user_name(user_name)
+    target_pos = position_repo.get_position_user_name(target_user_name)
 
     if((pos_user == 1 and pos_target == amount_players) or
         pos_user > pos_target):
-        position_repo.set_right_door(user_pos, True)
-        position_repo.set_left_door(target_pos, True)
-    else:
         position_repo.set_right_door(target_pos, True)
         position_repo.set_left_door(user_pos, True)
-
+    else:
+        position_repo.set_right_door(user_pos, True)
+        position_repo.set_left_door(target_pos, True)
 
 # Luego generamos el diccionario
 
@@ -522,21 +525,25 @@ class GameLogic:
 
     @db_session
     def is_there_obstacle_between_players(self, lobby_name: str, user_name: str, target_user_name: str) -> bool:
-        pos_user = self.position_repo.get_numb_position(user_name)
-        pos_target = self.position_repo.get_numb_position(target_user_name)
+        pos_user_numb = self.position_repo.get_numb_position(user_name)
+        pos_target_numb = self.position_repo.get_numb_position(target_user_name)
         amount_players = self.lobby_repo.get_amount_users(lobby_name)
+        pos_user = self.position_repo.get_position_user_name(user_name)
+        pos_target = self.position_repo.get_position_user_name(target_user_name)
+
         obstacle = False
-        if((pos_user == 1 and pos_target == amount_players) or
-            pos_user > pos_target):
-            obstacle = self.position_repo.get_left_door(user_name) and self.position_repo.get_right_door(target_user_name)
+        if((pos_user_numb == 1 and pos_target_numb == amount_players) or
+            pos_user_numb > pos_target_numb):
+            obstacle = self.position_repo.get_left_door(pos_user) and self.position_repo.get_right_door(pos_target)
         else:
-            obstacle = self.position_repo.get_left_door(target_user_name) and self.position_repo.get_right_door(user_name)
+            obstacle = self.position_repo.get_left_door(pos_target) and self.position_repo.get_right_door(pos_user)
 
         return obstacle
 
     @db_session
     def play_card(self, lobby_name: str, user_name: str, target_user_name: str, card_name: str):
         ALL_EFFECTS[card_name](lobby_name, user_name, target_user_name)
+
 
     @db_session
     def humans_win(self, lobby_name: str) -> bool:
@@ -545,20 +552,30 @@ class GameLogic:
         for user in users:
             if (user.role == "Cosa"):
                 is_there_cosa = True
-        return is_there_cosa
+        return (not is_there_cosa)
     
-    '''
     @db_session
     def cosa_win(self, lobby_name: str) -> bool:
         users = self.lobby_repo.get_lobby_set_users(lobby_name)
+        is_there_humans = False
+        for user in users:
+            if (user.role == "Humano"):
+                is_there_humans = True
+        return (not is_there_humans)
 
     @db_session
     def victory(self, lobby_name: str) -> bool:
-        gano_la_cosa or ganaron _los_humanos
+        self.humans_win(lobby_name) or self.cosa_win(lobby_name)
 
-    def lista_de_ganadores
-        if(gano_la_cosa):
-        else(ganaron _los_humanos):
+    @db_session
+    def list_winners(self, lobby_name: str) -> [str]:
+        winners = []
+        if(self.humans_win(lobby_name)):
+            pass
+        else: #gana cosa
+            pass
+        return winners
+    
     '''
 
     @db_session
@@ -573,4 +590,4 @@ class GameLogic:
                 human_count += 1
         there_is_no_human = human_count==0
         return (is_there_cosa ^ there_is_no_human)
-
+      '''

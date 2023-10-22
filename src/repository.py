@@ -568,4 +568,11 @@ class PositionRepository:
         user_repo = UserRepository()
         user = user_repo.get_user(user_name)
         pos = self.get_position(user)
-        return pos.number 
+        return pos.number
+
+    @db_session
+    def get_position_user_name(self, user_name: str) -> Position:
+        user_repo = UserRepository()
+        user = user_repo.get_user(user_name)
+        pos = self.get_position(user)
+        return pos
