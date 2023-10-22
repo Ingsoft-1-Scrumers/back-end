@@ -161,7 +161,7 @@ class GameLogic:
     def deal_cards_all_users(self, users : Set(User), game : Game):
         self.assign_the_thing(users, game)
         for user in users:
-            if user.role == "The thing":
+            if user.role == "Cosa":
                 num_cards_to_deal = CARDS_PER_USER-1
             else:
                 num_cards_to_deal = CARDS_PER_USER
