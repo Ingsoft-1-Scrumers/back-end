@@ -33,7 +33,25 @@ def analisis(game_name: str, user_name: str, target_user_name: str):
 
 def hacha(game_name: str, user_name: str, target_user_name: str):
     user_repo = UserRepository()
-    user_repo.set_user_in_quarantine_false(target_user_name) #!falta puerta atrancada
+    position_repo = PositionRepository()
+    lobby_repo = LobbyRepository()
+    game_logic = GameLogic()
+
+    if(user_name == target_user_name):
+        user_repo.set_user_in_quarantine_false(target_user_name)
+    else:
+        if(game_logic.is_there_obstacle_between_players(game_name, user_name, target_user_name)):
+            pos_user = position_repo.get_numb_position(user_name)
+            pos_target = position_repo.get_numb_position(target_user_name)
+            amount_players = lobby_repo.get_amount_users(game_name)
+            if((pos_user == 1 and pos_target == amount_players) or
+                pos_user > pos_target):
+                position_repo.get_left_door(user_name, False)
+                position_repo.get_right_door(target_user_name, False)
+            else:
+                position_repo.get_left_door(target_user_name, False)
+                position_repo.get_right_door(user_name, False)
+
 
 def sospecha(game_name: str, user_name: str, target_user_name: str):
     pass
@@ -51,38 +69,25 @@ def cuarentena(game_name: str, user_name: str, target_user_name: str):
     user_repo = UserRepository()
     user_repo.set_user_in_quarantine_true(target_user_name) 
 
-'''
+@db_session
 def puerta_atrancada(game_name: str, user_name: str, target_user_name: str):
     position_repo = PositionRepository()
     lobby_repo = LobbyRepository()
     pos_user = position_repo.get_numb_position(user_name)
     pos_target = position_repo.get_numb_position(target_user_name)
     amount_players = lobby_repo.get_amount_users(game_name)
-    user_pos = get_position(user_name)
-    target_pos = get_position(target_user_name)
+    user_pos = position_repo.get_position(user_name)
+    target_pos = position_repo.get_position(target_user_name)
 
     if((pos_user == 1 and pos_target == amount_players) or
         pos_user > pos_target):
-        set_right_door(user_pos)
-        set_left_door(target_pos)
+        position_repo.set_right_door(user_pos, True)
+        position_repo.set_left_door(target_pos, True)
     else:
-        set_right_door(target_pos)
-        set_left_door(user_pos)
-'''
-    
-@db_session
-def is_there_obstacle_between_players(self, lobby_name: str, user_name: str, target_user_name: str) -> bool:
-    pos_user = self.position_repo.get_numb_position(user_name)
-    pos_target = self.position_repo.get_numb_position(target_user_name)
-    amount_players = self.lobby_repo.get_amount_users
-    obstacle = False
-    if((pos_user == 1 and pos_target == amount_players) or
-        pos_user > pos_target):
-        obstacle = self.position_repo.get_left_door(user_name) and self.position_repo.get_right_door(target_user_name)
-    else:
-        obstacle = self.position_repo.get_left_door(target_user_name) and self.position_repo.get_right_door(user_name)
+        position_repo.set_right_door(target_pos, True)
+        position_repo.set_left_door(user_pos, True)
 
-    return obstacle
+
 # Luego generamos el diccionario
 
 ALL_EFFECTS = { #cartas de acción y obstáculo
@@ -555,3 +560,17 @@ class GameLogic:
         if(gano_la_cosa):
         else(ganaron _los_humanos):
     '''
+
+    @db_session
+    def victory(self, lobby_name: str):
+        users = self.lobby_repo.get_lobby_set_users(lobby_name)
+        is_there_cosa = False
+        human_count = 0
+        for user in users:
+            if (user.role == "Cosa"):
+                is_there_cosa = True
+            elif (user.role == "Humano"):
+                human_count += 1
+        there_is_no_human = human_count==0
+        return (is_there_cosa ^ there_is_no_human)
+

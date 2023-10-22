@@ -556,12 +556,12 @@ class PositionRepository:
         return position.left_door
 
     @db_session
-    def set_right_door(self, position: Position):
-        position.right_door = True
+    def set_right_door(self, position: Position, right_door: bool):
+        position.right_door = right_door
 
     @db_session
-    def set_left_door(self, position: Position):
-        position.left_door = True
+    def set_left_door(self, position: Position, left_door: bool):
+        position.left_door = left_door
 
     @db_session
     def get_numb_position(self, user_name: str) -> int:
