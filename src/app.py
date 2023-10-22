@@ -17,20 +17,16 @@ app.add_middleware(
 )
 
 #! Must be implemented
-# Verificar victoria
 # Juntar las partes
 
 #! Si llegamos
-# Puerta atrancada (Accion)
 # Infección
 # Seduccion (ya esta creo)
-# Hacha
 # Revisar codigo dado las nuevas Cartas
 # Refactorizar codigo (juntar los repos)
 # Tests (Ver que pasa si hacemos que los repositories sean globales)
 
 #! Si nos da el tiempo
-# Cuarentena
 # Sospecha
 # Whisky
 # Analisis
@@ -66,13 +62,14 @@ async def applied_effect(lobby_name : str):
     game_repo.set_target_to_be_afflicted(lobby_name, None)
     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
 
-    victory = False # Metodo verificar victoria 
+    victory = game_logic.victory(lobby_name) # Metodo verificar victoria 
+    
     if (victory):
         await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
         # TODO Mostrar pantalla de victoria
-        # Informacion final de la partida 
-        # TODO Borrar Lobby
+        list_winners = game_logic.list_winners(lobby_name) #! pedirlo por endpoint?
         await manager.remove_all_user_from_lobby(lobby_name)
+        game_logic.end_game(lobby_name)
     else:
         await exchange_stage(lobby_name, user_turn, user_finish)
 
@@ -190,12 +187,14 @@ async def game_flow(lobby_name : str):
             game_repo.clean_exchange_data(lobby_name)
             game_repo.set_effect_to_be_applied(lobby_name, None)
 
-            victory = False
+            victory = game_logic.victory(lobby_name)
             if (victory):
                 await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
+                list_winners = game_logic.list_winners(lobby_name) #! pedirlo por endpoint?
                 # TODO Mostrar pantalla de victoria
                 # TODO Borrar Lobby
                 await manager.remove_all_user_from_lobby(lobby_name)
+                game_logic.end_game(lobby_name)
             else:
                 await end_turn(lobby_name)
 

@@ -565,15 +565,19 @@ class GameLogic:
 
     @db_session
     def victory(self, lobby_name: str) -> bool:
-        self.humans_win(lobby_name) or self.cosa_win(lobby_name)
+        return self.humans_win(lobby_name) or self.cosa_win(lobby_name)
 
     @db_session
     def list_winners(self, lobby_name: str) -> [str]:
+        users = self.lobby_repo.get_lobby_set_users(lobby_name)
         winners = []
         if(self.humans_win(lobby_name)):
-            pass
-        else: #gana cosa
-            pass
+            for user in users:
+                if (user.role == "Humano"):
+                    winners.append(user.name)
+        else: #gana cosa e infectados (todos los user de la partida)
+            for user in users:
+                winners.append(user.name)
         return winners
     
     '''
