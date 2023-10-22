@@ -6,9 +6,7 @@ class ConnectionManager:
         self.users_with_no_lobby: {str} = {}
         self.users_in_lobby: dict[str, {str}] = {}
 
-    async def connect(self, websocket: WebSocket, user_name: str):
-        await websocket.accept()
-
+    def connect(self, websocket: WebSocket, user_name: str):
         if user_name in self.websockets:
             raise HTTPException(status_code= 400, detail= "User WebSocket already exists")
         

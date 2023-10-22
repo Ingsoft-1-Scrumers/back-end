@@ -203,15 +203,15 @@ async def game_flow(lobby_name : str):
             # TODO Borrar todo
             manager.remove_all_user_from_lobby(lobby_name)  
 
-@app.websocket('/websocket/{user_name}')
-async def lobby_listing(websocket: WebSocket, user_name: str):
+@app.websocket('/websocket/')
+async def lobby_listing(websocket: WebSocket):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
 
-    if not (user_repo.user_exists(user_name)):
-        raise HTTPException(status_code=404, detail='This user does not exist')
-    
-    await manager.connect(websocket, user_name)
+    await websocket.accept()
+    user_name = websocket.receive_text()
+    manager.connect(websocket, user_name)
+
     try:
         while True:
             message = await manager.receive_message(user_name)
