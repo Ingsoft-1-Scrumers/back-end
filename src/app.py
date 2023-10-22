@@ -95,12 +95,11 @@ async def game_flow(lobby_name : str):
 
     match game_status:
         case 'game_not_started':
-            while (not lobby_repo.is_everyone_ready(lobby_name)):
-                pass
-            lobby_repo.set_everyone_ready_false(lobby_name)
-            game_repo.set_game_status(lobby_name, "steal_card_stage")
-            await manager.broadcast_to_lobby_users(lobby_name, f"turn, {user_turn}")
-            await manager.send_message(user_turn, f"steal_card_stage")
+            if (lobby_repo.is_everyone_ready(lobby_name)):
+                lobby_repo.set_everyone_ready_false(lobby_name)
+                game_repo.set_game_status(lobby_name, "steal_card_stage")
+                await manager.broadcast_to_lobby_users(lobby_name, f"turn, {user_turn}")
+                await manager.send_message(user_turn, f"steal_card_stage")
 
         case 'steal_card_stage':
             game_repo.set_game_status(lobby_name, "discard_or_play")
@@ -475,6 +474,7 @@ async def ready(request: LobbyBase):
 
     try:
         user_repo.set_user_ready(user_name, True)
+        await game_flow(lobby_name)
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while setting the user as ready')
