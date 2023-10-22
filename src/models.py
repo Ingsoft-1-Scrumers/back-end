@@ -9,6 +9,7 @@ class User(db.Entity):
     role = Optional(str, default="Humano")
     lobby = Optional('Lobby', reverse='users')
     hosting_lobby = Optional('Lobby', reverse='host')
+    ready = Optional(bool, default=False)
     position = Optional('Position')
     hand = Set('Card')
     quarantine = Optional(bool, default=False)

@@ -18,9 +18,19 @@ class UserRepository:
     def get_user(self, user_name: str) -> User:
         user = User.get(name=user_name)
         if user is None:
-            raise ValueError("User does not exist with name: {}".format(user_name))
+            raise ValueError(f"User does not exist with name: {user_name}")
         return user
     
+    @db_session
+    def is_user_ready(self, user_name: str) -> bool:
+        user = self.get_user(user_name)
+        return user.ready
+    
+    @db_session
+    def set_user_ready(self, user_name: str, ready: bool):
+        user = self.get_user(user_name)
+        user.ready = ready
+
     @db_session
     def get_user_lobby(self, user_name: str) -> str:
         user = self.get_user(user_name)
@@ -158,7 +168,7 @@ class LobbyRepository:
     def get_lobby(self, lobby_name: str) -> Lobby:
         lobby = Lobby.get(name=lobby_name)
         if lobby is None:
-            raise ValueError("Lobby does not exist with name: {}".format(lobby_name))
+            raise ValueError(f"Lobby does not exist with name: {lobby_name}")
         return lobby
     
     @db_session
@@ -171,9 +181,19 @@ class LobbyRepository:
         lobby = self.get_lobby(lobby_name)
         game = lobby.game
         if game is None:
-            raise ValueError("Game does not exist with name: {}".format(lobby_name))
+            raise ValueError(f"Game does not exist with name: {lobby_name}")
         return game
     
+    @db_session
+    def is_everyone_ready(self, lobby_name: str) -> bool:
+        lobby_users = self.get_lobby_set_users(lobby_name)
+        result = True
+        for user in lobby_users:
+            if not user.ready:
+               result = False
+               break
+        return result
+
     @db_session
     def get_lobby_set_users(self, lobby_name: str) -> Set(User):
         lobby = self.get_lobby(lobby_name)
@@ -320,7 +340,7 @@ class GameRepository:
     def get_game(self, game_name: str) -> Game:
         game = Game.get(name=game_name)
         if game is None:
-            raise ValueError("Game does not exist with name: {}".format(game_name))
+            raise ValueError(f"Game does not exist with name: {game_name}")
         return game 
 
     @db_session

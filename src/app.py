@@ -87,6 +87,7 @@ async def end_turn(lobby_name : str):
     await manager.send_message(user_next_turn, f"steal_card_stage, {user_next_turn}")
 
 async def game_flow(lobby_name : str): 
+    lobby_repo = LobbyRepository()
     game_repo = GameRepository()
     game_logic = GameLogic()
     game_status = game_repo.get_game_status(lobby_name)
@@ -94,6 +95,9 @@ async def game_flow(lobby_name : str):
 
     match game_status:
         case 'game_not_started':
+            lobby_users = lobby_repo.get_lobby_users_no_host(lobby_name)
+            while (not lobby_repo.is_everyone_ready(lobby_users)):
+                pass
             game_repo.set_game_status(lobby_name, "steal_card_stage")
             await manager.broadcast_to_lobby_users(lobby_name, f"turn, {user_turn}")
             await manager.send_message(user_turn, f"steal_card_stage")
@@ -326,7 +330,6 @@ async def is_lobby_exist(lobby_name: str):
 
 @app.get('/joinable_lobbies/')
 async def get_joinable_lobbies():
-    user_repo = UserRepository()
     lobby_repo = LobbyRepository()
     
     try:
@@ -453,7 +456,29 @@ async def start_game(request: LobbyBase):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while starting the game')
- 
+
+@app.post('/ready/')
+async def ready(request: LobbyBase):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
+    user_repo = UserRepository()
+    lobby_repo = LobbyRepository()
+
+    if not (lobby_repo.lobby_exists(lobby_name)):
+        raise HTTPException(status_code=404, detail='This lobby name does not exist')
+    
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='This user is not in the lobby')
+    
+    if (not lobby_repo.is_game_started(lobby_name)):
+        raise HTTPException(status_code=406, detail='This game has not started')
+
+    try:
+        user_repo.set_user_ready(user_name, True)
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while setting the user as ready')
+
 @app.get('/users_position/{lobby_name}')
 async def get_users_position(lobby_name: str, user_name: str):
     lobby_repo = LobbyRepository()
