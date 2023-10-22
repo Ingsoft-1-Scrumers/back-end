@@ -210,7 +210,13 @@ class LobbyRepository:
                result = False
                break
         return result
-
+    
+    @db_session
+    def set_everyone_ready_false(self, lobby_name: str):
+        lobby_users = self.get_lobby_set_users(lobby_name)
+        for user in lobby_users:
+            user.ready = False
+            
     @db_session
     def get_lobby_set_users(self, lobby_name: str) -> Set(User):
         lobby = self.get_lobby(lobby_name)

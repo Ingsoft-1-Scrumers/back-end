@@ -95,9 +95,9 @@ async def game_flow(lobby_name : str):
 
     match game_status:
         case 'game_not_started':
-            lobby_users = lobby_repo.get_lobby_users_no_host(lobby_name)
-            while (not lobby_repo.is_everyone_ready(lobby_users)):
+            while (not lobby_repo.is_everyone_ready(lobby_name)):
                 pass
+            lobby_repo.set_everyone_ready_false(lobby_name)
             game_repo.set_game_status(lobby_name, "steal_card_stage")
             await manager.broadcast_to_lobby_users(lobby_name, f"turn, {user_turn}")
             await manager.send_message(user_turn, f"steal_card_stage")
