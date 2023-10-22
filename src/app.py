@@ -209,7 +209,8 @@ async def lobby_listing(websocket: WebSocket):
     lobby_repo = LobbyRepository()
 
     await websocket.accept()
-    user_name = websocket.receive_text()
+    await websocket.send_text("connection_established")
+    user_name =  await websocket.receive_text()
     manager.connect(websocket, user_name)
 
     try:
@@ -223,7 +224,7 @@ async def lobby_listing(websocket: WebSocket):
                 raise HTTPException(status_code=401, detail='This user is not in a lobby')
             
     except WebSocketDisconnect: #! Logica para desconexion no esperada
-        
+
         lobby_name = user_repo.get_user_lobby(user_name)
 
         if (lobby_name is None):
