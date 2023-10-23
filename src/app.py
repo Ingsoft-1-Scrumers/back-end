@@ -25,6 +25,7 @@ app.add_middleware(
 #! Quedan para proxima sprint
 # Fallaste
 # Si se descubre que la Cosa tiene el lanzallamas, se descubre que es la Cosa
+# Cambiar para que no ocurra intercambio si el objetivo esta en cuarentena
 # Agregar Tests
 # Reorganizar codigo
 
@@ -100,6 +101,7 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
         case _:
             await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
             game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
+            user_finish = game_logic.next_player(lobby_name, user_turn)
     
     game_repo.set_effect_to_be_applied(lobby_name, "None")
     game_repo.set_target_to_be_afflicted(lobby_name, "None")

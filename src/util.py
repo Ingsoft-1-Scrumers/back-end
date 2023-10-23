@@ -250,8 +250,10 @@ class GameLogic:
         amount_players = self.game_repo.get_amount_players(lobby_name)
         actual_turn = self.game_repo.get_turn(lobby_name)
         position_number = actual_turn.number
-        user = self.position_repo.get_user_position(actual_turn)
-        self.user_repo.decrease_quarantine(user)
+
+        user_name = self.position_repo.get_user_name_position(actual_turn)
+        if(self.user_repo.is_user_in_quarantine(user_name)):
+            self.user_repo.decrease_quarantine(user_name)
 
         new_turn_position = None
         while new_turn_position == None:

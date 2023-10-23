@@ -175,7 +175,6 @@ class UserRepository:
     def user_death(self, user_name: str):
         position_repo = PositionRepository()
         user = self.get_user(user_name)
-        user.is_alive = False
         user.lobby = None
         #user.position = None
         position_repo.remove_position(user)
@@ -192,7 +191,8 @@ class UserRepository:
         return user.position
 
     @db_session
-    def decrease_quarantine(self, user: User):
+    def decrease_quarantine(self, user_name: str):
+        user = self.get_user(user_name)
         user.quarantine -= 1
 
 class LobbyRepository:
@@ -614,15 +614,16 @@ class PositionRepository:
         return position.user
     
     @db_session
-    def get_position(self, user: User) -> Position:
-        position = Position.get(user=user)
+    def get_position(self, player: User) -> Position:
+        position = Position.get(user=player)
         if position is None:
             raise ValueError("Position does not exist")
         return position
     
     @db_session
     def remove_position(self, user: User):
-        position = self.get_position(user)
+        #position = self.get_position(user)
+        position = self.get_position_user_name(user.name)
         position.delete()
 
     @db_session
@@ -656,5 +657,5 @@ class PositionRepository:
         return pos
 
     @db_session
-    def get_user_position(self, position: Position) -> User:
-        return position.user
+    def get_user_name_position(self, position: Position) -> User:
+        return position.user.name
