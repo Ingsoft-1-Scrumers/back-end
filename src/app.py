@@ -404,7 +404,6 @@ async def leave_lobby(request: LobbyBase):
         raise HTTPException(status_code=406, detail='This game has already started')
     
     try:
-        
         if (user_repo.is_user_host(lobby_name, user_name) and lobby_repo.get_amount_users(lobby_name) == 1):
             lobby_repo.leave_lobby(lobby_name, user_name)
             await manager.remove_all_user_from_lobby(lobby_name)
@@ -479,7 +478,7 @@ async def ready(request: LobbyBase):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while setting the user as ready')
 
-@app.get('/users_position/{lobby_name}')
+@app.get('/users_position/{lobby_name}') #! Cambiar a futuro, en sprint 3
 async def get_users_position(lobby_name: str, user_name: str):
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
@@ -520,7 +519,6 @@ async def get_user_hand(lobby_name: str, user_name: str):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the hand')
 
-#! Este endpoint debe devolver toda la info de la mano del usuario
 @app.get('/user_cards_info/{lobby_name}/{user_name}') 
 async def get_play_combinations(lobby_name: str, user_name: str):
     user_repo = UserRepository()
