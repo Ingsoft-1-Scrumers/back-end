@@ -24,3 +24,13 @@ class PlayCardBase(BaseModel):
     user_name: str
     target_user_name: str
     card_id: int
+
+class CardBase(BaseModel):
+    lobby_name: str
+    user_name: str
+    card_id: int
+
+class ChoiceBase(BaseModel):
+    lobby_name: str
+    user_name: str
+    choice: str

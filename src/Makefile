@@ -15,6 +15,8 @@ clean_cache:
 	@find . -type d -name "__pycache__" -exec rm -rf {} +
 	@rm -rf .pytest_cache
 
+clean_all: clean_db clean_cache
+
 run_app: clean_db clean_cache
 	@echo "Running uvicorn..."
 	@uvicorn app:app --reload
