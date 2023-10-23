@@ -163,7 +163,7 @@ async def game_flow(lobby_name : str):
             else: # Jugar
                 target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
                 effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)
-                defense = game_logic.can_user_defend(target_user_name, effect_to_be_applied)
+                defense = game_logic.can_user_defend_play(target_user_name, effect_to_be_applied)
 
                 if (defense): # El target puede defenderse 
                     game_repo.set_game_status(lobby_name, "defend_or_skip")

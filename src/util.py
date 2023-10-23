@@ -9,10 +9,27 @@ def vigila_tus_espaldas(game_name: str, user_name: str, target_user_name: str):
     game_repo.set_direction(game_name, not direction)
 
 @db_session
+# Verificacion si target_user_name sigue vivo
 def lanzallamas(game_name: str, user_name: str, target_user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
     game_logic = GameLogic()
+    position_repo = PositionRepository()
+
+    pos_target = position_repo.get_position_user_name(target_user_name)
+    pos_target = pos_user = position_repo.get_position_user_name(user_name)
+    pos_previus_player = game_logic.previous_player(game_name, target_user_name)
+    pos_next_player = game_logic.next_player(game_name, target_user_name)
+    if (position_repo.get_right_door(pos_target)):
+        position_repo.set_left_door(pos_next_player, False)
+        position_repo.set_right_door(pos_target, False)
+        position_repo.set_left_door(pos_previus_player, True)
+        position_repo.set_right_door(pos_next_player, True)
+    if (position_repo.get_left_door(pos_target)):
+        position_repo.set_left_door(pos_target, False)
+        position_repo.set_right_door(pos_previus_player, False)
+        position_repo.set_left_door(pos_next_player, True)
+        position_repo.set_right_door(pos_target, True)
 
     target_user = user_repo.get_user(target_user_name)
     # Si se quiere eliminar al host, se cambia el mismo
@@ -523,16 +540,14 @@ class GameLogic:
         return exist_card
         
     @db_session
-    def can_user_defend_exchange(self, target_user_name: str) -> bool: #! Incluir Fallaste
-        return self.is_card_in_hand(target_user_name, "Aterrador") or self.is_card_in_hand(target_user_name, "No_gracias")
+    def can_user_defend_exchange(self, target_user_name: str) -> bool:
+        return self.is_card_in_hand(target_user_name, "Aterrador") or self.is_card_in_hand(target_user_name, "No_gracias") or self.is_card_in_hand(target_user_name, "Fallaste")
 
     @db_session
-    def can_user_defend(self, target_user_name: str, card_name: str) -> bool:
+    def can_user_defend_play(self, target_user_name: str, card_name: str) -> bool:
         defense = False
         match card_name:
-            case "Seduccion": 
-                defense = self.can_user_defend_exchange(target_user_name)
-            case "Cambio de lugar" | "Mas vale que corras":
+            case "Cambio de lugar":
                 defense = self.is_card_in_hand(target_user_name, "Aqui estoy bien")
             case "Lanzallamas":
                 defense = self.is_card_in_hand(target_user_name, "Nada de barbacoas")
