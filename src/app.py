@@ -17,16 +17,22 @@ app.add_middleware(
 )
 
 #! Tareas por hacer
-# Refactorizar y limpiar codigo
-# Tests (Ver que pasa si hacemos que los repositories sean globales)
+# Reorganizar y revisar el codigo de util.py y repository.py
+# Revisar Tests y agregar mas
+# Superinfeccion
 
 #! Cartas restantes
-# Defensas
+# Nada de Barbacoa
+# Aterrador
+# Aqui estoy bien
+# No gracias
 # Seduccion
 # Sospecha
 # Whisky
 # Analisis
-# Superinfeccion
+
+#! Quedan para proxima sprint
+# Fallaste
 
 async def exchange_stage(lobby_name : str, user_start : str, user_finish : str):
     game_repo = GameRepository()

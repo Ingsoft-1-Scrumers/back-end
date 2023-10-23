@@ -470,9 +470,10 @@ class GameLogic:
         total_user_cards = len(user_hand)
         for i in range(0, total_user_cards):
             cards_with_targets = {}
-            card_id = user_hand[i].id
-            card_name = user_hand[i].name
-            cards_with_targets[card_id] = self.targets_according_action_obstacle_card(user_name, lobby_name, card_name)
+            card_id = user_hand[i]["id"]
+            card_name = user_hand[i]["name"]
+            cards_with_targets["card_id"] = card_id
+            cards_with_targets["valid"] = self.targets_according_action_obstacle_card(user_name, lobby_name, card_name)
             cards_with_targets["discard"] = self.can_card_be_discarded(user_name, card_id)
             cards_with_targets_and_discard.append(cards_with_targets)
         return cards_with_targets_and_discard
