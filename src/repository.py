@@ -466,7 +466,7 @@ class GameRepository:
     @db_session
     def is_there_exchange_offer(self, lobby_name: str) -> bool:
         game = self.get_game(lobby_name)
-        return game.exchange_card_user_start is not 0
+        return game.exchange_card_user_start != 0
 
     @db_session
     def get_exchange_card_user_start(self, game_name: str) -> int:

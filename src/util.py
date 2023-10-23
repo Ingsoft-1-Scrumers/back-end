@@ -17,19 +17,17 @@ def lanzallamas(game_name: str, user_name: str, target_user_name: str):
     position_repo = PositionRepository()
 
     pos_target = position_repo.get_position_user_name(target_user_name)
-    pos_target = pos_user = position_repo.get_position_user_name(user_name)
-    pos_previus_player = game_logic.previous_player(game_name, target_user_name)
-    pos_next_player = game_logic.next_player(game_name, target_user_name)
+    previus_player_name = game_logic.previous_player(game_name, target_user_name)
+    next_player_name = game_logic.next_player(game_name, target_user_name)
+    pos_previus_player = position_repo.get_position_user_name(previus_player_name)
+    pos_next_player = position_repo.get_position_user_name(next_player_name)
     if (position_repo.get_right_door(pos_target)):
-        position_repo.set_left_door(pos_next_player, False)
         position_repo.set_right_door(pos_target, False)
-        position_repo.set_left_door(pos_previus_player, True)
-        position_repo.set_right_door(pos_next_player, True)
+        position_repo.set_right_door(pos_previus_player, True)
+    #import ipdb; ipdb.set_trace()
     if (position_repo.get_left_door(pos_target)):
         position_repo.set_left_door(pos_target, False)
-        position_repo.set_right_door(pos_previus_player, False)
         position_repo.set_left_door(pos_next_player, True)
-        position_repo.set_right_door(pos_target, True)
 
     target_user = user_repo.get_user(target_user_name)
     # Si se quiere eliminar al host, se cambia el mismo
