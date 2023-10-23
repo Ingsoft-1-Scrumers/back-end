@@ -94,13 +94,13 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
             await manager.send_message(user_turn, f"analisis, {target_user_name}, {user_cards}")
         
         case 'Mas vale que corras' | 'Cambio de lugar':
-            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
             game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
             user_finish = game_logic.next_player(lobby_name, user_turn)
 
         case _:
-            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
             game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
             user_finish = game_logic.next_player(lobby_name, user_turn)
     
     game_repo.set_effect_to_be_applied(lobby_name, "None")

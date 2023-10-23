@@ -386,17 +386,26 @@ class GameLogic:
         user_position = self.position_repo.get_position(user_name)
         user_number = self.position_repo.get_number(user_position)
         amount_players = self.game_repo.get_amount_players(game_name)
+        direction = self.game_repo.get_direction(game_name)
 
-        previous_position = None
-        while previous_position == None:
-            if user_number == 1:
-                previous_position = self.game_repo.get_n_position(amount_players, game_name)
-            else:
-                previous_position = self.game_repo.get_n_position(user_number-1, game_name)
+        if (direction): # Derecha
+            previous_position = None
+            while previous_position == None:
+                if user_number == 1:
+                    previous_position = self.game_repo.get_n_position(amount_players, game_name)
+                else:
+                    previous_position = self.game_repo.get_n_position(user_number-1, game_name)
 
-            if previous_position == None:
-                user_number = (user_number % amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
-        
+                if previous_position == None:
+                    user_number = (user_number % amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
+        else: # Izquierda
+            previous_position = None
+            while previous_position == None:
+                previous_position = self.game_repo.get_n_position((user_number % amount_players) + 1, game_name)
+
+                if previous_position == None:
+                    user_number = (user_number % amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
+
         previous_user = self.position_repo.get_user(previous_position)
         return previous_user.name
     
@@ -405,16 +414,27 @@ class GameLogic:
         user_position = self.position_repo.get_position(user_name)
         user_number = self.position_repo.get_number(user_position)
         amount_players = self.game_repo.get_amount_players(game_name)
+        direction = self.game_repo.get_direction(game_name)
 
-        next_position = None
-        while next_position == None:
-            next_position = self.game_repo.get_n_position((user_number % amount_players) + 1, game_name)
+        if (direction): # Derecha
+            next_position = None
+            while next_position == None:
+                next_position = self.game_repo.get_n_position((user_number % amount_players) + 1, game_name)
 
-            if next_position == None:
-                user_number = (user_number % amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
+                if next_position == None:
+                    user_number = (user_number % amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
+        else: # Izquierda
+            next_position = None
+            while next_position == None:
+                if user_number == 1:
+                    next_position = self.game_repo.get_n_position(amount_players, game_name)
+                else:
+                    next_position = self.game_repo.get_n_position(user_number-1, game_name)
+
+                if next_position == None:
+                    user_number = (user_number % amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
 
         next_user = self.position_repo.get_user(next_position)
-        
         return next_user.name
 
     @db_session
