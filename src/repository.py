@@ -55,11 +55,11 @@ class UserRepository:
         return hand_dict
     
     @db_session
-    def get_user_hand_int(self, user_name: str) -> [int]:
+    def get_user_cards(self, user_name: str) -> [str]:
         hand = self.get_hand(user_name)
         result = []
         for card in hand:
-            result.append(card.id)
+            result.append(card.name)
         return result
 
     @db_session

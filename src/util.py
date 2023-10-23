@@ -28,15 +28,7 @@ def lanzallamas(game_name: str, user_name: str, target_user_name: str):
 @db_session
 def cambio_de_lugar(game_name: str, user_name: str, target_user_name: str):
     game_logic = GameLogic()
-    game_repo = GameRepository()
     game_logic.swap_positions(user_name, target_user_name)
-    # intercambiar 1 carta con el siguiente jugador desde tu nueva ubicación
-    # Falta actualizar el turno del siguiente jugador
-    previous_player = game_logic.previous_player(game_name, target_user_name)
-    game = game_repo.get_game(game_name)
-    game.turn = previous_player.position
-
-
 
 @db_session
 def hacha(game_name: str, user_name: str, target_user_name: str):
@@ -64,23 +56,7 @@ def hacha(game_name: str, user_name: str, target_user_name: str):
                 position_repo.set_right_door(pos_user, False)
 
 @db_session
-def analisis(game_name: str, user_name: str, target_user_name: str):
-    pass
-
-@db_session
-def sospecha(game_name: str, user_name: str, target_user_name: str):
-    pass
-
-@db_session
 def determinacion(game_name: str, user_name: str, target_user_name: str):
-    pass
-
-@db_session
-def whisky(game_name: str, user_name: str, target_user_name: str):
-    pass
-
-@db_session
-def seduccion(game_name: str, user_name: str, target_user_name: str):
     pass
 
 @db_session
@@ -114,12 +90,12 @@ ALL_EFFECTS = { #cartas de acción y obstáculo
     "Lanzallamas": lanzallamas,
     "Cambio de lugar": cambio_de_lugar,
     "Mas vale que corras": cambio_de_lugar,
-    "Analisis": analisis,
+    #"Analisis": analisis,
     "Hacha": hacha,
-    "Sospecha": sospecha,
+    #"Sospecha": sospecha,
     "Determinacion": determinacion,
-    "Whisky": whisky,
-    "Seduccion": seduccion,
+    #"Whisky": whisky,
+    #"Seduccion": seduccion,
 #OBSTÁCULO
     "Cuarentena": cuarentena,
     "Puerta trancada": puerta_atrancada
@@ -404,7 +380,7 @@ class GameLogic:
         return exchange_with_superinfection
     
     @db_session
-    def previous_player(self, game_name :str, user_name :str) -> User:
+    def previous_player(self, game_name :str, user_name :str) -> str:
         user_position = self.position_repo.get_position(user_name)
         user_number = self.position_repo.get_number(user_position)
         amount_players = self.game_repo.get_amount_players(game_name)
@@ -420,10 +396,10 @@ class GameLogic:
                 user_number = (user_number % amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
         
         previous_user = self.position_repo.get_user(previous_position)
-        return previous_user
+        return previous_user.name
     
     @db_session
-    def next_player(self, game_name :str, user_name :str) -> User:
+    def next_player(self, game_name :str, user_name :str) -> str:
         user_position = self.position_repo.get_position(user_name)
         user_number = self.position_repo.get_number(user_position)
         amount_players = self.game_repo.get_amount_players(game_name)
@@ -436,14 +412,15 @@ class GameLogic:
                 user_number = (user_number % amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
 
         next_user = self.position_repo.get_user(next_position)
-        return next_user
+        
+        return next_user.name
 
     @db_session
     def targets_according_action_obstacle_card(self, user_name: str, lobby_name: str, card_name: str) -> list[str]:
         lobby_repo = LobbyRepository()
         all_players = lobby_repo.get_lobby_users_no_host(lobby_name)
-        previous_user_name = (self.previous_player(lobby_name, user_name)).name
-        next_user_name = (self.next_player(lobby_name, user_name)).name
+        previous_user_name = (self.previous_player(lobby_name, user_name))
+        next_user_name = (self.next_player(lobby_name, user_name))
         
         target_users = []
         match card_name:

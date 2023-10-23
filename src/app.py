@@ -24,7 +24,6 @@ app.add_middleware(
 # Sospecha - Seduccion - Whisky - Analisis - Superinfection
 
 #! Cartas restantes
-# Determinacion
 # Nada de Barbacoa
 # Aterrador
 # Aqui estoy bien
@@ -40,17 +39,27 @@ async def exchange_stage(lobby_name : str, user_start : str, user_finish : str):
     superinfection = game_logic.exchange_with_superinfection(user_start, user_finish)
     obstacle = game_logic.is_there_obstacle(lobby_name, user_start)
 
-    if (superinfection) or (obstacle): # No hay intercambio de cartas
-        # TODO Aplicar Efecto (Superinfeccion) y verificar si hay victoria
+    if (obstacle): # Hay obstaculo
+        await end_turn(lobby_name)
+    elif (superinfection): # Hay superinfeccion
         if (game_logic.superinfection(user_start)):
             user_repo.user_death(user_start)
-            hand_id = user_repo.get_user_hand_int(user_start)
-            await manager.broadcast_to_lobby_users(lobby_name, f"Superinfection, {hand_id}")
+            await manager.broadcast_to_lobby_users(lobby_name, f"superinfection, {user_start}")
         else:
             user_repo.user_death(user_finish)
-            hand_id = user_repo.get_user_hand_int(user_finish)
-            await manager.broadcast_to_lobby_users(lobby_name, f"Superinfection, {hand_id}")
-        end_turn(lobby_name)
+            await manager.broadcast_to_lobby_users(lobby_name, f"superinfection, {user_finish}")
+
+        victory = game_logic.victory(lobby_name) 
+
+        if (victory):
+            list_winners = game_logic.list_winners(lobby_name)
+            await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
+            await manager.broadcast_to_lobby_users(lobby_name, f"winners, {list_winners}")
+            await manager.remove_all_user_from_lobby(lobby_name)
+            game_logic.end_game(lobby_name)
+        else:
+            await end_turn(lobby_name)
+
     else: # Hay intercambio de cartas
         game_repo.set_game_status(lobby_name, "start_exchange")
         await manager.send_message(user_start, f"start_exchange, {user_finish}")
@@ -59,34 +68,46 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
     game_repo = GameRepository()
     game_logic = GameLogic()
     user_repo = UserRepository()
+    card_repo = CardRepository()
     user_turn = game_repo.get_turn_user(lobby_name)
-    
-    user_finish = game_logic.next_player(lobby_name)
-    
+    user_finish = game_logic.next_player(lobby_name, user_turn)
+
     match effect_to_be_applied:
         case 'Seduccion':
             user_finish = target_user_name
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
         
-        #mensaje con id de la carta aleatoria que mira
+        # Mensaje con id de la carta aleatoria que mira
         case 'Sospecha':
-            card_id = user_repo.get_random_card_from_hand(target_user_name)
-            await manager.send_message(user_turn, f"Sospecha, {card_id}")
+            random_card = user_repo.get_random_card_from_hand(target_user_name)
+            card_name = card_repo.get_card_name(random_card)
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+            await manager.send_message(user_turn, f"sospecha, {target_user_name}, {card_name}")
 
-        #mensaje con una LISTA de ids de cartas de su mano que le muestra al resto de jugadores
+        # Mensaje con una LISTA de ids de cartas de su mano que le muestra al resto de jugadores
         case 'Whisky':
-            hand_id = user_repo.get_user_hand_int(target_user_name)
-            await manager.broadcast_to_lobby_users(lobby_name, f"Whisky, {hand_id}")
+            user_cards = user_repo.get_user_cards(user_turn)
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
+            await manager.broadcast_to_lobby_users(lobby_name, f"whisky, {user_turn}, {user_cards}")
 
-        #mensaje con una LISTA de ids de cartas del objetivo
+        # Mensaje con una LISTA de ids de cartas del objetivo
         case 'Analisis':
-            hand_id = user_repo.get_user_hand_int(target_user_name)
-            await manager.send_message(user_turn, f"Analisis, {hand_id}")
-          
-    game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
+            user_cards = user_repo.get_user_cards(target_user_name)
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+            await manager.send_message(user_turn, f"analisis, {target_user_name}, {user_cards}")
+        
+        case 'Mas vale que corras' | 'Cambio de lugar':
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+            game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
+            user_finish = game_logic.next_player(lobby_name, user_turn)
+
+        case _:
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+            game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
+    
     game_repo.set_effect_to_be_applied(lobby_name, "None")
     game_repo.set_target_to_be_afflicted(lobby_name, "None")
-    victory = game_logic.victory(lobby_name) # Metodo verificar victoria 
-    await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+    victory = game_logic.victory(lobby_name) 
     
     if (victory):
         list_winners = game_logic.list_winners(lobby_name)
@@ -161,7 +182,6 @@ async def game_flow(lobby_name : str):
                 await manager.send_message(target_user_name, f"defend_play, {user_turn}, {effect_to_be_applied}")
 
         case 'defend_play':
-            # TODO Aplicar Efecto (Defensa sobre User Turn)
             target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
             game_repo.set_effect_to_be_applied(lobby_name, "None")
             game_repo.set_target_to_be_afflicted(lobby_name, "None")
@@ -202,6 +222,13 @@ async def game_flow(lobby_name : str):
 
         case 'defend_exchange':
             # TODO Aplicar Efecto (Defensa sobre User Start)
+            effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)
+            match effect_to_be_applied:
+                case 'Aterrador':
+                    pass
+                case 'Fallaste':
+                    pass
+
             user_finish = game_repo.get_exchange_user_finish(lobby_name)
             game_repo.clean_exchange_data(lobby_name)
             game_repo.set_effect_to_be_applied(lobby_name, "None")
