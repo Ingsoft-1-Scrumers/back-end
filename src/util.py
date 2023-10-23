@@ -9,7 +9,6 @@ def vigila_tus_espaldas(game_name: str, user_name: str, target_user_name: str):
     game_repo.set_direction(game_name, not direction)
 
 @db_session
-# Verificacion si target_user_name sigue vivo
 def lanzallamas(game_name: str, user_name: str, target_user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
@@ -74,7 +73,7 @@ def puerta_atrancada(game_name: str, user_name: str, target_user_name: str):
     user_pos = position_repo.get_position_user_name(user_name)
     target_pos = position_repo.get_position_user_name(target_user_name)
 
-    if((pos_user == 1 and pos_target == amount_players) or
+    if ((pos_user == 1 and pos_target == amount_players) or
         pos_user > pos_target):
         position_repo.set_right_door(target_pos, True)
         position_repo.set_left_door(user_pos, True)
@@ -247,7 +246,7 @@ class GameLogic:
 
     @db_session
     def next_turn(self, lobby_name: str, direction: bool):
-        amount_players = self.game_repo.get_amount_players(lobby_name)
+        initial_amount_players = self.game_repo.get_initial_amount(lobby_name)
         actual_turn = self.game_repo.get_turn(lobby_name)
         position_number = actual_turn.number
 
@@ -258,16 +257,16 @@ class GameLogic:
         new_turn_position = None
         while new_turn_position == None:
             if direction: # True = Sentido horario
-                new_turn_position = self.game_repo.get_n_position((position_number % amount_players) + 1, lobby_name)
+                new_turn_position = self.game_repo.get_n_position((position_number % initial_amount_players) + 1, lobby_name)
 
                 if (new_turn_position == None):
-                    position_number = (position_number % amount_players) + 1
+                    position_number = (position_number % initial_amount_players) + 1
                     
             else: # False = Sentido antihorario
                 if position_number == 1:
-                    new_turn_position = self.game_repo.get_n_position(amount_players, lobby_name)
+                    new_turn_position = self.game_repo.get_n_position(initial_amount_players, lobby_name)
                     if (new_turn_position == None):
-                        position_number = amount_players
+                        position_number = initial_amount_players
                 else:
                     new_turn_position = self.game_repo.get_n_position(position_number-1, lobby_name)
                     if (new_turn_position == None):
@@ -382,60 +381,63 @@ class GameLogic:
         return exchange_with_superinfection
     
     @db_session
-    def previous_player(self, game_name :str, user_name :str) -> str:
+    def left_player(self, game_name: str, user_name: str) -> str:
+        initial_amount_players = self.game_repo.get_initial_amount(game_name)
         user_position = self.position_repo.get_position(user_name)
         user_number = self.position_repo.get_number(user_position)
-        amount_players = self.game_repo.get_amount_players(game_name)
+        left_position = None
+
+        while left_position == None:
+            left_position = self.game_repo.get_n_position((user_number % initial_amount_players) + 1, game_name)
+
+            if left_position == None:
+                user_number = (user_number % initial_amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
+
+        return left_position.user.name
+
+    @db_session
+    def right_player(self, game_name: str, user_name: str) -> str:
+        initial_amount_players = self.game_repo.get_initial_amount(game_name)
+        user_position = self.position_repo.get_position(user_name)
+        user_number = self.position_repo.get_number(user_position)
+        right_position = None
+
+        while right_position == None:
+            if user_number == 1:
+                right_position = self.game_repo.get_n_position(initial_amount_players, game_name)
+            else:
+                right_position = self.game_repo.get_n_position(user_number-1, game_name)
+
+            if right_position == None:
+                if (user_number > 1):
+                    user_number -= 1
+                else:
+                    user_number = initial_amount_players
+            
+        return right_position.user.name
+
+
+    @db_session
+    def previous_player(self, game_name :str, user_name :str) -> str:
         direction = self.game_repo.get_direction(game_name)
 
-        if (direction): # Derecha
-            previous_position = None
-            while previous_position == None:
-                if user_number == 1:
-                    previous_position = self.game_repo.get_n_position(amount_players, game_name)
-                else:
-                    previous_position = self.game_repo.get_n_position(user_number-1, game_name)
-
-                if previous_position == None:
-                    user_number = (user_number % amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
-        else: # Izquierda
-            previous_position = None
-            while previous_position == None:
-                previous_position = self.game_repo.get_n_position((user_number % amount_players) + 1, game_name)
-
-                if previous_position == None:
-                    user_number = (user_number % amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
-
-        previous_user = self.position_repo.get_user(previous_position)
-        return previous_user.name
+        if (direction): # Izquierda
+            previous_player = self.right_player(game_name, user_name)
+        else: # Derecha
+            previous_player = self.left_player(game_name, user_name)
+            
+        return previous_player
     
     @db_session
     def next_player(self, game_name :str, user_name :str) -> str:
-        user_position = self.position_repo.get_position(user_name)
-        user_number = self.position_repo.get_number(user_position)
-        amount_players = self.game_repo.get_amount_players(game_name)
         direction = self.game_repo.get_direction(game_name)
 
-        if (direction): # Derecha
-            next_position = None
-            while next_position == None:
-                next_position = self.game_repo.get_n_position((user_number % amount_players) + 1, game_name)
-
-                if next_position == None:
-                    user_number = (user_number % amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
-        else: # Izquierda
-            next_position = None
-            while next_position == None:
-                if user_number == 1:
-                    next_position = self.game_repo.get_n_position(amount_players, game_name)
-                else:
-                    next_position = self.game_repo.get_n_position(user_number-1, game_name)
-
-                if next_position == None:
-                    user_number = (user_number % amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
-
-        next_user = self.position_repo.get_user(next_position)
-        return next_user.name
+        if (direction): # Izquierda
+            next_player = self.left_player(game_name, user_name)
+        else: # Derecha
+            next_player = self.right_player(game_name, user_name)
+        
+        return next_player
 
     @db_session
     def targets_according_action_obstacle_card(self, user_name: str, lobby_name: str, card_name: str) -> list[str]:

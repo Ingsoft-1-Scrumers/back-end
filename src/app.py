@@ -18,12 +18,13 @@ app.add_middleware(
 
 #! Tareas por hacer
 # Revisar el codigo de util.py, repository.py, app.py
+# Revisar que se cumplan las reglas de los targets del juego
 # Revisar Tests
-# Hacer que la cuarentena se reduzca en 1 cada turno
 # Mejorar el tema de la victoria
 
 #! Quedan para proxima sprint
 # Fallaste
+# Refactorizar todo lo que es posiciones
 # Si se descubre que la Cosa tiene el lanzallamas, se descubre que es la Cosa
 # Cambiar para que no ocurra intercambio si el objetivo esta en cuarentena
 # Agregar Tests
@@ -32,7 +33,6 @@ app.add_middleware(
 async def exchange_stage(lobby_name : str, user_start : str, user_finish : str):
     game_repo = GameRepository()
     game_logic = GameLogic()
-    user_repo = UserRepository()
     superinfection = game_logic.exchange_with_superinfection(user_start, user_finish)
     obstacle = game_logic.is_there_obstacle(lobby_name, user_start)
 
@@ -40,10 +40,10 @@ async def exchange_stage(lobby_name : str, user_start : str, user_finish : str):
         await end_turn(lobby_name)
     elif (superinfection): # Hay superinfeccion
         if (game_logic.superinfection(user_start)):
-            user_repo.user_death(user_start)
+            game_logic.play_card(lobby_name, user_finish, user_start, "Lanzallamas")
             await manager.broadcast_to_lobby_users(lobby_name, f"superinfection, {user_start}")
         else:
-            user_repo.user_death(user_finish)
+            game_logic.play_card(lobby_name, user_start, user_finish, "Lanzallamas")
             await manager.broadcast_to_lobby_users(lobby_name, f"superinfection, {user_finish}")
 
         victory = game_logic.victory(lobby_name) 
@@ -119,7 +119,12 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
 async def end_turn(lobby_name : str):
     game_repo = GameRepository()
     game_logic = GameLogic()
+    user_repo = UserRepository()
     user_turn = game_repo.get_turn_user(lobby_name)
+
+    if (user_repo.is_user_in_quarantine(user_turn)):
+        user_repo.decrease_quarantine(user_turn)
+
     direction = game_repo.get_direction(lobby_name)
     game_logic.next_turn(lobby_name, direction)
     user_next_turn = game_repo.get_turn_user(lobby_name)

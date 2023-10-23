@@ -171,12 +171,11 @@ class UserRepository:
         user = self.get_user(user_name)
         user.role = "Infectado"
 
-    @db_session
+    @db_session #! Que pasa con las puerta atrancada?
     def user_death(self, user_name: str):
         position_repo = PositionRepository()
         user = self.get_user(user_name)
         user.lobby = None
-        #user.position = None
         position_repo.remove_position(user)
     
     @db_session
@@ -387,7 +386,7 @@ class GameRepository:
     def create_game(self, lobby_name: str, amount_players: int):
         lobby_repo = LobbyRepository()
         lobby = lobby_repo.get_lobby(lobby_name)
-        Game(lobby=lobby, name=lobby_name, amount_players=amount_players)
+        Game(lobby=lobby, name=lobby_name, amount_players=amount_players, initial_amount=amount_players)
 
     @db_session
     def get_game(self, game_name: str) -> Game:
@@ -430,7 +429,17 @@ class GameRepository:
     def get_amount_players(self, game_name: str) -> int:
         game = self.get_game(game_name)
         return game.amount_players
-    
+
+    @db_session
+    def set_initial_amount(self, game_name: str, initial_amount_players: int):
+        game = self.get_game(game_name)
+        game.initial_amount = initial_amount_players
+
+    @db_session
+    def get_initial_amount(self, game_name: str):
+        game = self.get_game(game_name)
+        return game.initial_amount
+
     @db_session
     def get_n_position(self, n: int, game_name: str) -> Position:
         game_positions = self.get_all_positions(game_name) 
@@ -622,7 +631,6 @@ class PositionRepository:
     
     @db_session
     def remove_position(self, user: User):
-        #position = self.get_position(user)
         position = self.get_position_user_name(user.name)
         position.delete()
 
