@@ -51,7 +51,7 @@ class UserRepository:
         hand_dict = [{'id': card.id,
                     'name': card.name, 
                     'type': card.type} for card in hand]
-        hand_dict = sorted(hand_dict, key=lambda x: x.get('type', ''))
+        hand_dict = sorted(hand_dict, key=lambda x: x.get('name', ''))
         return hand_dict
     
     @db_session
@@ -171,6 +171,12 @@ class UserRepository:
         user.lobby = None
         #user.position = None
         position_repo.remove_position(user)
+    
+    @db_session
+    def get_random_card_from_hand(self, user_name: str) -> Card:
+        hand = self.get_hand(user_name)
+        random_card = hand.random(1)[0]
+        return random_card.id
 
 class LobbyRepository:
 

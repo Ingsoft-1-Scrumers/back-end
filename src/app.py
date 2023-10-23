@@ -19,17 +19,16 @@ app.add_middleware(
 #! Tareas por hacer
 # Reorganizar y revisar el codigo de util.py y repository.py
 # Revisar Tests y agregar mas
-# Superinfeccion
+
+# LISTAS, hay que probarlas
+# Sospecha - Seduccion - Whisky - Analisis - Superinfection
 
 #! Cartas restantes
+# Determinacion
 # Nada de Barbacoa
 # Aterrador
 # Aqui estoy bien
 # No gracias
-# Seduccion
-# Sospecha
-# Whisky
-# Analisis
 
 #! Quedan para proxima sprint
 # Fallaste
@@ -37,11 +36,20 @@ app.add_middleware(
 async def exchange_stage(lobby_name : str, user_start : str, user_finish : str):
     game_repo = GameRepository()
     game_logic = GameLogic()
+    user_repo = UserRepository()
     superinfection = game_logic.exchange_with_superinfection(user_start, user_finish)
     obstacle = game_logic.is_there_obstacle(lobby_name, user_start)
 
     if (superinfection) or (obstacle): # No hay intercambio de cartas
         # TODO Aplicar Efecto (Superinfeccion) y verificar si hay victoria
+        if (game_logic.superinfection(user_start)):
+            user_repo.user_death(user_start)
+            hand_id = user_repo.get_user_hand_int(user_start)
+            await manager.broadcast_to_lobby_users(lobby_name, f"Superinfection, {hand_id}")
+        else:
+            user_repo.user_death(user_finish)
+            hand_id = user_repo.get_user_hand_int(user_finish)
+            await manager.broadcast_to_lobby_users(lobby_name, f"Superinfection, {hand_id}")
         end_turn(lobby_name)
     else: # Hay intercambio de cartas
         game_repo.set_game_status(lobby_name, "start_exchange")
@@ -50,12 +58,29 @@ async def exchange_stage(lobby_name : str, user_start : str, user_finish : str):
 async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_applied : str):
     game_repo = GameRepository()
     game_logic = GameLogic()
+    user_repo = UserRepository()
     user_turn = game_repo.get_turn_user(lobby_name)
     
-    if (effect_to_be_applied == "Seduccion"): 
-        user_finish = target_user_name
-    else:
-        user_finish = game_logic.next_player(lobby_name, user_turn)
+    user_finish = game_logic.next_player(lobby_name)
+    
+    match effect_to_be_applied:
+        case 'Seduccion':
+            user_finish = target_user_name
+        
+        #mensaje con id de la carta aleatoria que mira
+        case 'Sospecha':
+            card_id = user_repo.get_random_card_from_hand(target_user_name)
+            await manager.send_message(user_turn, f"Sospecha, {card_id}")
+
+        #mensaje con una LISTA de ids de cartas de su mano que le muestra al resto de jugadores
+        case 'Whisky':
+            hand_id = user_repo.get_user_hand_int(target_user_name)
+            await manager.broadcast_to_lobby_users(lobby_name, f"Whisky, {hand_id}")
+
+        #mensaje con una LISTA de ids de cartas del objetivo
+        case 'Analisis':
+            hand_id = user_repo.get_user_hand_int(target_user_name)
+            await manager.send_message(user_turn, f"Analisis, {hand_id}")
           
     game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
     game_repo.set_effect_to_be_applied(lobby_name, "None")
