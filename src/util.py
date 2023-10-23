@@ -250,6 +250,8 @@ class GameLogic:
         amount_players = self.game_repo.get_amount_players(lobby_name)
         actual_turn = self.game_repo.get_turn(lobby_name)
         position_number = actual_turn.number
+        user = self.position_repo.get_user_position(actual_turn)
+        self.user_repo.decrease_quarantine(user)
 
         new_turn_position = None
         while new_turn_position == None:
@@ -308,10 +310,12 @@ class GameLogic:
     def swap_with_infect_effect(self, lobby_name :str, card_start_id: int, card_finish_id: int, user_start: str, user_finish: str):
         card_start = self.card_repo.get_card_name(card_start_id)
         card_finish = self.card_repo.get_card_name(card_finish_id)
-        more_than_one_human = self.more_than_one_human(lobby_name)
-        if(card_start == "Infectado" and more_than_one_human):
+        start_user = self.user_repo.get_user(user_start)
+        finish_user = self.user_repo.get_user(user_finish)
+        # more_than_one_human = self.more_than_one_human(lobby_name)
+        if (card_start == "Infectado" and start_user.role == "Cosa"):
             self.user_repo.infect_effect(user_finish)
-        elif(card_finish == "Infectado" and more_than_one_human):
+        elif (card_finish == "Infectado" and finish_user.role == "Cosa"):
             self.user_repo.infect_effect(user_start)
 
     @db_session

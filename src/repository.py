@@ -154,12 +154,12 @@ class UserRepository:
     @db_session
     def is_user_in_quarantine(self, user_name: str) -> bool:
         user = self.get_user(user_name)
-        return user.quarantine
+        return (user.quarantine > 0)
 
     @db_session
     def set_user_in_quarantine_true(self, user_name: str):
         user = self.get_user(user_name)
-        user.quarantine = True
+        user.quarantine = 2
 
     @db_session
     def set_user_in_quarantine_false(self, user_name: str):
@@ -190,6 +190,10 @@ class UserRepository:
     def get_position(self, user_name: str) -> Position:
         user = self.get_user(user_name)
         return user.position
+
+    @db_session
+    def decrease_quarantine(self, user: User):
+        user.quarantine -= 1
 
 class LobbyRepository:
 
@@ -650,3 +654,7 @@ class PositionRepository:
         user = user_repo.get_user(user_name)
         pos = self.get_position(user)
         return pos
+
+    @db_session
+    def get_user_position(self, position: Position) -> User:
+        return position.user

@@ -12,7 +12,7 @@ class User(db.Entity):
     position = Optional('Position')
     hand = Set('Card')
     role = Optional(str, default="Humano")
-    quarantine = Optional(bool, default=False)
+    quarantine = Optional(int, default=0)
 
 class Lobby(db.Entity):
     name = PrimaryKey(str)
