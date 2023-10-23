@@ -453,7 +453,7 @@ class GameRepository:
     @db_session
     def is_there_exchange_offer(self, lobby_name: str) -> bool:
         game = self.get_game(lobby_name)
-        return game.exchange_card_user_start is not None
+        return game.exchange_card_user_start is not 0
 
     @db_session
     def get_exchange_card_user_start(self, game_name: str) -> int:
@@ -500,8 +500,8 @@ class GameRepository:
         game = self.get_game(game_name)
         game.exchange_user_start = "None"
         game.exchange_user_finish = "None"
-        game.exchange_card_user_start = "None"
-        game.exchange_card_user_finish = "None"
+        game.exchange_card_user_start = 0
+        game.exchange_card_user_finish = 0
 
     @db_session
     def get_direction(self, game_name: str) -> bool:

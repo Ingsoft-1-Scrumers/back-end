@@ -41,8 +41,8 @@ class Game(db.Entity):
     effect_to_be_applied = Optional(str)
     target_to_be_afflicted = Optional(str)
 
-    exchange_card_user_start = Optional(int)
-    exchange_card_user_finish = Optional(int)
+    exchange_card_user_start = Optional(int, default=0)
+    exchange_card_user_finish = Optional(int, default=0)
     exchange_user_start = Optional(str)
     exchange_user_finish = Optional(str)
 
