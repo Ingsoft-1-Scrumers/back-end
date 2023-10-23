@@ -94,6 +94,16 @@ class UserRepository:
         return lobby_users.select().where(name=target_user_name).exists()
     
     @db_session
+    def is_user_alive(self, user_name: str) -> bool:
+        user = self.get_user(user_name)
+        return user.is_alive
+    
+    @db_session
+    def is_target_alive(self, target_user_name: str) -> bool:
+        target = self.get_user(target_user_name)
+        return target.is_alive
+    
+    @db_session
     def is_user_host(self, lobby_name: str, user_name: str) -> bool:
         lobby_repo = LobbyRepository()
         host_name = lobby_repo.get_host_name(lobby_name)
@@ -157,6 +167,7 @@ class UserRepository:
     def user_death(self, user_name: str):
         position_repo = PositionRepository()
         user = self.get_user(user_name)
+        user.is_alive = False
         user.lobby = None
         #user.position = None
         position_repo.remove_position(user)
@@ -468,10 +479,10 @@ class GameRepository:
     @db_session
     def clean_exchange_data(self, game_name: str):
         game = self.get_game(game_name)
-        game.exchange_user_start = None
-        game.exchange_user_finish = None
-        game.exchange_card_user_start = None
-        game.exchange_card_user_finish = None
+        game.exchange_user_start = "None"
+        game.exchange_user_finish = "None"
+        game.exchange_card_user_start = "None"
+        game.exchange_card_user_finish = "None"
 
     @db_session
     def get_direction(self, game_name: str) -> bool:
@@ -479,9 +490,9 @@ class GameRepository:
         return game.direction
 
     @db_session
-    def set_discard_or_play(self, game_name: str, decison: str):
+    def set_discard_or_play(self, game_name: str, decision: str):
         game = self.get_game(game_name)
-        game.discard_or_play = decison
+        game.discard_or_play = decision
 
     @db_session
     def get_discard_or_play(self, game_name: str) -> str:

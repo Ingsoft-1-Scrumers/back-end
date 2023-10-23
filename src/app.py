@@ -55,11 +55,11 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
     if (effect_to_be_applied == "Seduccion"): 
         user_finish = target_user_name
     else:
-        user_finish = game_logic.next_player(lobby_name)
+        user_finish = game_logic.next_player(lobby_name, user_turn)
           
     game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
-    game_repo.set_effect_to_be_applied(lobby_name, None)
-    game_repo.set_target_to_be_afflicted(lobby_name, None)
+    game_repo.set_effect_to_be_applied(lobby_name, "None")
+    game_repo.set_target_to_be_afflicted(lobby_name, "None")
     victory = game_logic.victory(lobby_name) # Metodo verificar victoria 
     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
     
@@ -106,10 +106,10 @@ async def game_flow(lobby_name : str):
 
         case 'discard_or_play':
             choice = game_repo.get_discard_or_play(lobby_name)
-            game_repo.set_discard_or_play(lobby_name, None)
+            game_repo.set_discard_or_play(lobby_name, "None")
 
             if (choice == 'discard'): # Descartar
-                user_next_turn = game_logic.next_player(lobby_name)
+                user_next_turn = game_logic.next_player(lobby_name, user_turn)
                 await exchange_stage(lobby_name, user_turn, user_next_turn)
             else: # Jugar
                 target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
@@ -125,7 +125,7 @@ async def game_flow(lobby_name : str):
    
         case 'defend_or_skip':
             choice = game_repo.get_defend_or_skip(lobby_name)
-            game_repo.set_defend_or_skip(lobby_name, None)
+            game_repo.set_defend_or_skip(lobby_name, "None")
             target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
             effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)
 
@@ -138,15 +138,15 @@ async def game_flow(lobby_name : str):
         case 'defend_play':
             # TODO Aplicar Efecto (Defensa sobre User Turn)
             target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
-            game_repo.set_effect_to_be_applied(lobby_name, None)
-            game_repo.set_target_to_be_afflicted(lobby_name, None)
+            game_repo.set_effect_to_be_applied(lobby_name, "None")
+            game_repo.set_target_to_be_afflicted(lobby_name, "None")
             game_repo.set_game_status(lobby_name, "steal_after_defend")
 
             await manager.broadcast_to_lobby_users(lobby_name, f"defense_play, {target_user_name}")
             await manager.send_message(target_user_name, f"steal_after_defend, {target_user_name}")
 
         case 'steal_after_defend':
-            user_next_turn = game_logic.next_player(lobby_name)
+            user_next_turn = game_logic.next_player(lobby_name, user_turn)
             await exchange_stage(lobby_name, user_turn, user_next_turn)
             
         case 'start_exchange':
@@ -166,7 +166,7 @@ async def game_flow(lobby_name : str):
             user_start = game_repo.get_exchange_user_start(lobby_name)
             user_finish = game_repo.get_exchange_user_finish(lobby_name)
             choice = game_repo.get_defend_or_exchange(lobby_name)
-            game_repo.set_defend_or_exchange(lobby_name, None)
+            game_repo.set_defend_or_exchange(lobby_name, "None")
         
             if (choice == "defense"): # Quiere defenderse
                 game_repo.set_game_status(lobby_name, "defend_exchange")
@@ -179,7 +179,7 @@ async def game_flow(lobby_name : str):
             # TODO Aplicar Efecto (Defensa sobre User Start)
             user_finish = game_repo.get_exchange_user_finish(lobby_name)
             game_repo.clean_exchange_data(lobby_name)
-            game_repo.set_effect_to_be_applied(lobby_name, None)
+            game_repo.set_effect_to_be_applied(lobby_name, "None")
             game_repo.set_game_status(lobby_name, "steal_after_exchange")
 
             await manager.broadcast_to_lobby_users(lobby_name, f"defense_play, {user_finish}")
@@ -190,7 +190,7 @@ async def game_flow(lobby_name : str):
 
         case 'finish_exchange':
             game_repo.clean_exchange_data(lobby_name)
-            game_repo.set_effect_to_be_applied(lobby_name, None)
+            game_repo.set_effect_to_be_applied(lobby_name, "None")
             victory = game_logic.victory(lobby_name)
 
             if (victory):
@@ -634,10 +634,6 @@ async def play_card(request: PlayCardBase):
 
     if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
         raise HTTPException(status_code=401, detail='This user is not in the lobby')
-    
-    # El target puede ser el mismo usuario o alguien mas
-    if not (user_repo.is_target_in_lobby(lobby_name, target_user_name)): 
-        raise HTTPException(status_code=401, detail='This target user is not in the lobby')
     
     if not (user_repo.check_user_has_card(user_name, card_id)):
         raise HTTPException(status_code=401, detail='This user does not have this card')
