@@ -16,21 +16,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#! Must be implemented
-# Juntar las partes
-
-#! Si llegamos
-# Infección
-# Seduccion (ya esta creo)
-# Revisar codigo dado las nuevas Cartas
-# Refactorizar codigo (juntar los repos)
+#! Tareas por hacer
+# Refactorizar y limpiar codigo
 # Tests (Ver que pasa si hacemos que los repositories sean globales)
 
-#! Si nos da el tiempo
+#! Cartas restantes
+# Defensas
+# Seduccion
 # Sospecha
 # Whisky
 # Analisis
-# Superinfeccion (facil)
+# Superinfeccion
 
 async def exchange_stage(lobby_name : str, user_start : str, user_finish : str):
     game_repo = GameRepository()
@@ -39,18 +35,16 @@ async def exchange_stage(lobby_name : str, user_start : str, user_finish : str):
     obstacle = game_logic.is_there_obstacle(lobby_name, user_start)
 
     if (superinfection) or (obstacle): # No hay intercambio de cartas
-        #eliminar superinfectado
+        # TODO Aplicar Efecto (Superinfeccion) y verificar si hay victoria
         end_turn(lobby_name)
     else: # Hay intercambio de cartas
         game_repo.set_game_status(lobby_name, "start_exchange")
         await manager.send_message(user_start, f"start_exchange, {user_finish}")
 
-async def applied_effect(lobby_name : str):
+async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_applied : str):
     game_repo = GameRepository()
     game_logic = GameLogic()
     user_turn = game_repo.get_turn_user(lobby_name)
-    target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
-    effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)#! no es mejor pasarlo como argumento desde gameflow???
     
     if (effect_to_be_applied == "Seduccion"): 
         user_finish = target_user_name
@@ -60,14 +54,13 @@ async def applied_effect(lobby_name : str):
     game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
     game_repo.set_effect_to_be_applied(lobby_name, None)
     game_repo.set_target_to_be_afflicted(lobby_name, None)
-    await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
-
     victory = game_logic.victory(lobby_name) # Metodo verificar victoria 
+    await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
     
     if (victory):
+        list_winners = game_logic.list_winners(lobby_name)
         await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
-        # TODO Mostrar pantalla de victoria
-        list_winners = game_logic.list_winners(lobby_name) #! pedirlo por endpoint?
+        await manager.broadcast_to_lobby_users(lobby_name, f"winners, {list_winners}")
         await manager.remove_all_user_from_lobby(lobby_name)
         game_logic.end_game(lobby_name)
     else:
@@ -108,6 +101,7 @@ async def game_flow(lobby_name : str):
         case 'discard_or_play':
             choice = game_repo.get_discard_or_play(lobby_name)
             game_repo.set_discard_or_play(lobby_name, None)
+
             if (choice == 'discard'): # Descartar
                 user_next_turn = game_logic.next_player(lobby_name)
                 await exchange_stage(lobby_name, user_turn, user_next_turn)
@@ -119,19 +113,21 @@ async def game_flow(lobby_name : str):
                 if (defense): # El target puede defenderse 
                     game_repo.set_game_status(lobby_name, "defend_or_skip")
                     await manager.send_message(user_turn, f"waiting_target_defense")
-                    await manager.send_message(target_user_name, f"defend_or_skip, {user_turn}")
+                    await manager.send_message(target_user_name, f"defend_or_skip, {user_turn}, {effect_to_be_applied}")
                 else: # El target no puede defenderse
-                    await applied_effect(lobby_name)
+                    await applied_effect(lobby_name, target_user_name, effect_to_be_applied)
    
         case 'defend_or_skip':
             choice = game_repo.get_defend_or_skip(lobby_name)
             game_repo.set_defend_or_skip(lobby_name, None)
+            target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
+            effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)
+
             if (game_repo.get_defend_or_skip(lobby_name) == "skip"): # No quiere defenderse
-                await applied_effect(lobby_name)
+                await applied_effect(lobby_name, target_user_name, effect_to_be_applied)
             else: # Quiere defenderse
-                target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
                 game_repo.set_game_status(lobby_name, "defend_play")
-                await manager.send_message(target_user_name, f"defend_play")
+                await manager.send_message(target_user_name, f"defend_play, {user_turn}, {effect_to_be_applied}")
 
         case 'defend_play':
             # TODO Aplicar Efecto (Defensa sobre User Turn)
@@ -168,7 +164,7 @@ async def game_flow(lobby_name : str):
         
             if (choice == "defense"): # Quiere defenderse
                 game_repo.set_game_status(lobby_name, "defend_exchange")
-                await manager.send_message(user_finish, f"defend_exchange")
+                await manager.send_message(user_finish, f"defend_exchange, {user_start}")
             else: # No quiere defenderse
                 game_repo.set_game_status(lobby_name, "finish_exchange")
                 await manager.send_message(user_finish, f"finish_exchange, {user_start}")
@@ -189,26 +185,22 @@ async def game_flow(lobby_name : str):
         case 'finish_exchange':
             game_repo.clean_exchange_data(lobby_name)
             game_repo.set_effect_to_be_applied(lobby_name, None)
-
             victory = game_logic.victory(lobby_name)
+
             if (victory):
+                list_winners = game_logic.list_winners(lobby_name)
                 await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
-                list_winners = game_logic.list_winners(lobby_name) #! pedirlo por endpoint?
-                # TODO Mostrar pantalla de victoria
-                # TODO Borrar Lobby
+                await manager.broadcast_to_lobby_users(lobby_name, f"winners, {list_winners}")
                 await manager.remove_all_user_from_lobby(lobby_name)
                 game_logic.end_game(lobby_name)
             else:
                 await end_turn(lobby_name)
 
-        case 'unexpected_disconnection':
-            # TODO Borrar todo
-            await manager.remove_all_user_from_lobby(lobby_name)  
-
 @app.websocket('/websocket/{user_name}')
 async def lobby_listing(websocket: WebSocket, user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
+    game_logic = GameLogic()
 
     await manager.connect(websocket, user_name)
     try:
@@ -223,13 +215,12 @@ async def lobby_listing(websocket: WebSocket, user_name: str):
             else:
                 raise HTTPException(status_code=401, detail='This user is not in a lobby')
             
-    except WebSocketDisconnect: #! Logica para desconexion no esperada
+    except WebSocketDisconnect:
 
         is_in_lobby = user_repo.is_user_in_a_lobby(user_name)
 
         if (not is_in_lobby):
             await manager.disconnect(user_name)
-            user_repo.remove_user(user_name)
         else:
             lobby_name = user_repo.get_user_lobby(user_name)
 
@@ -237,10 +228,8 @@ async def lobby_listing(websocket: WebSocket, user_name: str):
                 await manager.disconnect(user_name)
                 await manager.broadcast_to_lobby_users(lobby_name, f"user_disconnect_in_game, {user_name}")
                 await manager.remove_all_user_from_lobby(lobby_name)
-                lobby_repo.remove_lobby(lobby_name)
-                user_repo.remove_user(user_name)
+                game_logic.end_game(lobby_name)                
             else:
-    
                 if (user_repo.is_user_host(lobby_name, user_name) and lobby_repo.get_amount_users(lobby_name) == 1):
                     lobby_repo.leave_lobby(lobby_name, user_name)
                     await manager.disconnect(user_name)
@@ -258,7 +247,7 @@ async def lobby_listing(websocket: WebSocket, user_name: str):
                     total_users = lobby_repo.get_amount_users(lobby_name)
                     await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
                     
-                user_repo.remove_user(user_name)
+        user_repo.remove_user(user_name)
 
 @app.post('/create_user/')
 async def create_user(user: UserBase):
@@ -535,7 +524,7 @@ async def get_play_combinations(lobby_name: str, user_name: str):
         raise HTTPException(status_code=406, detail='This game has not started yet')
     
     try:
-        return game_logic.get_play_combinations(lobby_name, user_name)
+        return game_logic.get_play_combinations(user_name, lobby_name)
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the hand')
@@ -557,10 +546,6 @@ async def steal_card(request: LobbyBase):
     
     if not (lobby_repo.is_game_started(lobby_name)):
         raise HTTPException(status_code=406, detail='This game has not started yet')
-    
-    # En esta sprint no estan las cartas de determinacion, fallaste y panico
-    if (user_repo.get_total_cards(user_name) >= 5):
-        raise HTTPException(status_code=406, detail='This user already has 5 cards')
     
     try:
         if (game_repo.get_game_status(lobby_name) == 'steal_card_stage'):
@@ -748,6 +733,7 @@ async def defense_card(request: CardBase):
         await game_flow(lobby_name)
     except Exception as e:
         print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while defending the card')
        
 #! Suponemos que el front eligio correctamente al usuario   
 @app.post('/swap_card/')
@@ -806,7 +792,7 @@ async def swap_card(request: PlayCardBase):
             else:
                 await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_finish}, {user_start}")
             
-        await game_flow(lobby_name)
-
+        await game_flow(lobby_name)  
     except Exception as e:
+        print(e)
         raise HTTPException(status_code=500, detail='An error occurred while swapping the card')
