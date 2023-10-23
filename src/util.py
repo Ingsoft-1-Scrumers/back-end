@@ -591,19 +591,3 @@ class GameLogic:
                 if (user.role != "Humano"):
                     winners.append(user.name)
         return winners
-    
-    '''
-
-    @db_session
-    def victory(self, lobby_name: str):
-        users = self.lobby_repo.get_lobby_set_users(lobby_name)
-        is_there_cosa = False
-        human_count = 0
-        for user in users:
-            if (user.role == "Cosa"):
-                is_there_cosa = True
-            elif (user.role == "Humano"):
-                human_count += 1
-        there_is_no_human = human_count==0
-        return (is_there_cosa ^ there_is_no_human)
-      '''

@@ -17,12 +17,16 @@ app.add_middleware(
 )
 
 #! Tareas por hacer
-# Reorganizar y revisar el codigo de util.py, repository.py, app.py
-# Revisar Tests (y agregar mas)
+# Revisar el codigo de util.py, repository.py, app.py
+# Revisar Tests
 # Hacer que la cuarentena se reduzca en 1 cada turno
+# Mejorar el tema de la victoria
 
 #! Quedan para proxima sprint
 # Fallaste
+# Si se descubre que la Cosa tiene el lanzallamas, se descubre que es la Cosa
+# Agregar Tests
+# Reorganizar codigo
 
 async def exchange_stage(lobby_name : str, user_start : str, user_finish : str):
     game_repo = GameRepository()

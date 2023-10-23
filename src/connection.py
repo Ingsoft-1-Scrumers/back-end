@@ -86,5 +86,7 @@ class ConnectionManager:
         if lobby_name not in self.users_in_lobby.keys():
             raise Exception("Lobby does not exist")
         
-        for user_name in self.users_in_lobby[lobby_name]:
+        users_in_lobby = self.users_in_lobby[lobby_name].copy()
+
+        for user_name in users_in_lobby:
             await self.remove_user_from_lobby(lobby_name, user_name)
