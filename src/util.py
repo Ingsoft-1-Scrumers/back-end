@@ -28,7 +28,15 @@ def lanzallamas(game_name: str, user_name: str, target_user_name: str):
 @db_session
 def cambio_de_lugar(game_name: str, user_name: str, target_user_name: str):
     game_logic = GameLogic()
+    game_repo = GameRepository()
     game_logic.swap_positions(user_name, target_user_name)
+    # intercambiar 1 carta con el siguiente jugador desde tu nueva ubicación
+    # Falta actualizar el turno del siguiente jugador
+    previous_player = game_logic.previous_player(game_name, target_user_name)
+    game = game_repo.get_game(game_name)
+    game.turn = previous_player.position
+
+
 
 @db_session
 def hacha(game_name: str, user_name: str, target_user_name: str):

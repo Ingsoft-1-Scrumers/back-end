@@ -177,6 +177,11 @@ class UserRepository:
         hand = self.get_hand(user_name)
         random_card = hand.random(1)[0]
         return random_card.id
+    
+    @db_session
+    def get_position(self, user_name: str) -> Position:
+        user = self.get_user(user_name)
+        return user.position
 
 class LobbyRepository:
 
