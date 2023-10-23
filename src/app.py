@@ -17,17 +17,9 @@ app.add_middleware(
 )
 
 #! Tareas por hacer
-# Reorganizar y revisar el codigo de util.py y repository.py
-# Revisar Tests y agregar mas
-
-# LISTAS, hay que probarlas
-# Sospecha - Seduccion - Whisky - Analisis - Superinfection
-
-#! Cartas restantes
-# Nada de Barbacoa
-# Aterrador
-# Aqui estoy bien
-# No gracias
+# Reorganizar y revisar el codigo de util.py, repository.py, app.py
+# Revisar Tests (y agregar mas)
+# Hacer que la cuarentena se reduzca en 1 cada turno
 
 #! Quedan para proxima sprint
 # Fallaste
@@ -221,15 +213,17 @@ async def game_flow(lobby_name : str):
                 await manager.send_message(user_finish, f"finish_exchange, {user_start}")
 
         case 'defend_exchange':
-            # TODO Aplicar Efecto (Defensa sobre User Start)
             effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)
+            user_start = game_repo.get_exchange_user_start(lobby_name)
+            user_finish = game_repo.get_exchange_user_finish(lobby_name)
+            card_start = game_repo.get_exchange_card_user_start(lobby_name)
+
             match effect_to_be_applied:
                 case 'Aterrador':
+                    await manager.send_message(user_finish, f"aterrador, {user_start}, {card_start}")
+                case 'Fallaste': #! Sprint 3
                     pass
-                case 'Fallaste':
-                    pass
-
-            user_finish = game_repo.get_exchange_user_finish(lobby_name)
+            
             game_repo.clean_exchange_data(lobby_name)
             game_repo.set_effect_to_be_applied(lobby_name, "None")
             game_repo.set_game_status(lobby_name, "steal_after_exchange")

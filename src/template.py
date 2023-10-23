@@ -96,7 +96,8 @@ No_gracias = {
 Fallaste = {
     "card_name" : "Fallaste",
     "card_type" : "Defensa",
-    "quantity_numb_players" : [1, 1, 2, 2, 2, 2, 2, 3, 3]
+    "quantity_numb_players" : [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    #"quantity_numb_players" : [1, 1, 2, 2, 2, 2, 2, 3, 3]
 }
 
 Nada_de_barbacoas = {

@@ -90,12 +90,8 @@ ALL_EFFECTS = { #cartas de acción y obstáculo
     "Lanzallamas": lanzallamas,
     "Cambio de lugar": cambio_de_lugar,
     "Mas vale que corras": cambio_de_lugar,
-    #"Analisis": analisis,
     "Hacha": hacha,
-    #"Sospecha": sospecha,
     "Determinacion": determinacion,
-    #"Whisky": whisky,
-    #"Seduccion": seduccion,
 #OBSTÁCULO
     "Cuarentena": cuarentena,
     "Puerta trancada": puerta_atrancada

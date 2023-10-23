@@ -53,6 +53,14 @@ class UserRepository:
                     'type': card.type} for card in hand]
         hand_dict = sorted(hand_dict, key=lambda x: x.get('name', ''))
         return hand_dict
+
+    @db_session
+    def get_user_hand_int(self, user_name: str) -> [int]:
+        hand = self.get_hand(user_name)
+        result = []
+        for card in hand:
+            result.append(card.id)
+        return result
     
     @db_session
     def get_user_cards(self, user_name: str) -> [str]:
@@ -499,6 +507,11 @@ class GameRepository:
     def get_direction(self, game_name: str) -> bool:
         game = self.get_game(game_name)
         return game.direction
+
+    @db_session
+    def set_direction(self, game_name: str, new_direction: bool):
+        game = self.get_game(game_name)
+        game.direction = new_direction
 
     @db_session
     def set_discard_or_play(self, game_name: str, decision: str):
