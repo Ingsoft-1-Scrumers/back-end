@@ -641,7 +641,7 @@ async def discard_card(request: CardBase):
     if not (user_repo.is_user_turn(lobby_name, user_name)):
         raise HTTPException(status_code=401, detail='It is not your turn')
     
-    if not (game_logic.can_card_be_discarded(id_card)):
+    if not (game_logic.can_card_be_discarded(user_name, id_card)):
         raise HTTPException(status_code=406, detail='This card cannot be discarded')
     
     try:
