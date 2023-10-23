@@ -10,7 +10,7 @@ class ConnectionManager:
         await websocket.accept()
 
         if user_name in self.websockets:
-            raise HTTPException(status_code= 400, detail= "User WebSocket already exists")
+            raise Exception("User WebSocket already exists")
         
         if len(self.users_with_no_lobby) == 0:
             self.users_with_no_lobby = set()

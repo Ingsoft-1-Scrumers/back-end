@@ -94,16 +94,6 @@ class UserRepository:
         return lobby_users.select().where(name=target_user_name).exists()
     
     @db_session
-    def is_user_alive(self, user_name: str) -> bool:
-        user = self.get_user(user_name)
-        return user.is_alive
-    
-    @db_session
-    def is_target_alive(self, target_user_name: str) -> bool:
-        target = self.get_user(target_user_name)
-        return target.is_alive
-    
-    @db_session
     def is_user_host(self, lobby_name: str, user_name: str) -> bool:
         lobby_repo = LobbyRepository()
         host_name = lobby_repo.get_host_name(lobby_name)
@@ -167,7 +157,6 @@ class UserRepository:
     def user_death(self, user_name: str):
         position_repo = PositionRepository()
         user = self.get_user(user_name)
-        user.is_alive = False
         user.lobby = None
         #user.position = None
         position_repo.remove_position(user)

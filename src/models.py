@@ -5,13 +5,13 @@ db = Database()
 
 class User(db.Entity):
     name = PrimaryKey(str)
-    is_alive = Optional(bool, default=True)
-    role = Optional(str, default="Humano")
     lobby = Optional('Lobby', reverse='users')
     hosting_lobby = Optional('Lobby', reverse='host')
+
     ready = Optional(bool, default=False)
     position = Optional('Position')
     hand = Set('Card')
+    role = Optional(str, default="Humano")
     quarantine = Optional(bool, default=False)
 
 class Lobby(db.Entity):
@@ -40,8 +40,6 @@ class Game(db.Entity):
 
     effect_to_be_applied = Optional(str)
     target_to_be_afflicted = Optional(str)
-    
-    user_target_effect = Optional(str)
 
     exchange_card_user_start = Optional(int)
     exchange_card_user_finish = Optional(int)
