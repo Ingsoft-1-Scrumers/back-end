@@ -855,3 +855,13 @@ async def swap_card(request: PlayCardBase):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while swapping the card')
+    
+@app.get('/get_user/role/{lobby_name}/{user_name}')
+async def get_user_role(lobby_name: str, user_name: str):
+    user_repo = UserRepository()
+    try:
+        role = user_repo.get_role(user_name)
+        return {user_name: role}
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An internal error occurred')

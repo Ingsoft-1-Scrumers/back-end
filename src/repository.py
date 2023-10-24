@@ -194,6 +194,11 @@ class UserRepository:
         user = self.get_user(user_name)
         user.quarantine -= 1
 
+    @db_session
+    def get_role(self, user_name: str) -> str:
+        user = self.get_user(user_name)
+        return user.role
+
 class LobbyRepository:
 
     @db_session
