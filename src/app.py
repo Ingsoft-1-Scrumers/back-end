@@ -871,7 +871,7 @@ async def get_user_role(lobby_name: str, user_name: str):
         raise HTTPException(status_code=406, detail='This game has not started')
     try:
         role = user_repo.get_role(user_name)
-        return {user_name: role}
+        return {'role': role}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An internal error occurred')
