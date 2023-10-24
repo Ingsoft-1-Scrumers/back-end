@@ -859,6 +859,16 @@ async def swap_card(request: PlayCardBase):
 @app.get('/get_user/role/{lobby_name}/{user_name}')
 async def get_user_role(lobby_name: str, user_name: str):
     user_repo = UserRepository()
+    lobby_repo = LobbyRepository()
+    game_repo = GameRepository()
+    if not (user_repo.user_exists(user_name)):
+        raise HTTPException(status_code=404, detail='This user does not exist')
+    if not (lobby_repo.lobby_exists(lobby_name)):
+        raise HTTPException(status_code=404, detail='This lobby name does not exist')
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='This user is not in the lobby')
+    if not (lobby_repo.is_game_started(lobby_name)):
+        raise HTTPException(status_code=406, detail='This game has not started')
     try:
         role = user_repo.get_role(user_name)
         return {user_name: role}
