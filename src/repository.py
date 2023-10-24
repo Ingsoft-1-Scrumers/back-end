@@ -68,7 +68,7 @@ class UserRepository:
         result = []
         for card in hand:
             result.append(card.name)
-        result_string = ' '.join(map(str, result))
+        result_string = ', '.join(map(str, result))
         return result_string
 
     @db_session

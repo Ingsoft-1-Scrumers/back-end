@@ -620,15 +620,9 @@ class GameLogic:
         return self.humans_win(lobby_name) or self.cosa_win(lobby_name)
 
     @db_session
-    def list_winners(self, lobby_name: str) -> [str]:
-        users = self.lobby_repo.get_lobby_set_users(lobby_name)
-        winners = []
+    def list_winners(self, lobby_name: str) -> str:
         if (self.humans_win(lobby_name)):
-            for user in users:
-                if (user.role == "Humano"):
-                    winners.append(user.name)
+            winners = "los humanos"
         else:
-            for user in users:
-                if (user.role != "Humano"):
-                    winners.append(user.name)
+            winners = "la Cosa y los infectados"
         return winners
