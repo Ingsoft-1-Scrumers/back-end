@@ -705,6 +705,7 @@ async def play_card(request: PlayCardBase):
         game_repo.set_effect_to_be_applied(lobby_name, card_name)
         game_repo.set_target_to_be_afflicted(lobby_name, target_user_name)
         await game_flow(lobby_name)
+        return {'message' : 'Card played successfully'}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while playing the card')
