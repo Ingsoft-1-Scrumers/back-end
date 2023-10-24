@@ -562,9 +562,9 @@ class GameRepository:
         return game.target_to_be_afflicted
 
     @db_session
-    def set_defend_or_skip(self, game_name: str, decison: str):
+    def set_defend_or_skip(self, game_name: str, decision: str):
         game = self.get_game(game_name)
-        game.defend_or_skip = decison
+        game.defend_or_skip = decision
 
     @db_session
     def get_defend_or_skip(self, game_name: str) -> str:
@@ -572,9 +572,9 @@ class GameRepository:
         return game.defend_or_skip
 
     @db_session
-    def set_defend_or_exchange(self, game_name: str, decison: str):
+    def set_defend_or_exchange(self, game_name: str, decision: str):
         game = self.get_game(game_name)
-        game.defend_or_exchange = decison
+        game.defend_or_exchange = decision
 
     @db_session
     def get_defend_or_exchange(self, game_name: str) -> str:

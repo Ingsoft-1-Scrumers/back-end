@@ -728,7 +728,10 @@ async def defend_or_skip(request: ChoiceBase):
         raise HTTPException(status_code=401, detail='This user is not in the lobby')
     
     try:
-        game_repo.set_defend_or_skip(lobby_name, choice)
+        if (choice == "defense"):
+            game_repo.set_defend_or_skip(lobby_name, "defense")
+        else:
+            game_repo.set_defend_or_skip(lobby_name, "skip")
         await game_flow(lobby_name)
     except Exception as e:
         print(e)
@@ -753,7 +756,10 @@ async def defend_or_exchange(request: ChoiceBase):
         raise HTTPException(status_code=401, detail='This user is not in the lobby')
     
     try:
-        game_repo.set_defend_or_exchange(lobby_name, choice)
+        if (choice == "defense"):
+            game_repo.set_defend_or_skip(lobby_name, "defense")
+        else:
+            game_repo.set_defend_or_skip(lobby_name, "exchange")
         await game_flow(lobby_name)
     except Exception as e:
         print(e)
