@@ -63,12 +63,13 @@ class UserRepository:
         return result
     
     @db_session
-    def get_user_cards(self, user_name: str) -> [str]:
+    def get_user_cards(self, user_name: str) -> str:
         hand = self.get_hand(user_name)
         result = []
         for card in hand:
             result.append(card.name)
-        return result
+        result_string = ' '.join(map(str, result))
+        return result_string
 
     @db_session
     def get_total_cards(self, user_name: str) -> int:
