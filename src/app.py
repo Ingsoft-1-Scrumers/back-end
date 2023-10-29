@@ -137,6 +137,7 @@ async def end_turn(lobby_name : str):
 async def game_flow(lobby_name : str): 
     lobby_repo = LobbyRepository()
     game_repo = GameRepository()
+    card_repo = CardRepository()
     game_logic = GameLogic()
     game_status = game_repo.get_game_status(lobby_name)
     user_turn = game_repo.get_turn_user(lobby_name)
@@ -174,13 +175,14 @@ async def game_flow(lobby_name : str):
    
         case 'defend_or_skip':
             choice = game_repo.get_defend_or_skip(lobby_name)
-            game_repo.set_defend_or_skip(lobby_name, "None")
             target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
             effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)
 
             if (game_repo.get_defend_or_skip(lobby_name) == "skip"): # No quiere defenderse
+                game_repo.set_defend_or_skip(lobby_name, "None")    #!seteamos despues de preguntar lo q tenia
                 await applied_effect(lobby_name, target_user_name, effect_to_be_applied)
             else: # Quiere defenderse
+                game_repo.set_defend_or_skip(lobby_name, "None")
                 game_repo.set_game_status(lobby_name, "defend_play")
                 await manager.send_message(target_user_name, f"defend_play, {user_turn}, {effect_to_be_applied}")
 
@@ -214,9 +216,8 @@ async def game_flow(lobby_name : str):
             user_start = game_repo.get_exchange_user_start(lobby_name)
             user_finish = game_repo.get_exchange_user_finish(lobby_name)
             choice = game_repo.get_defend_or_exchange(lobby_name)
-            game_repo.set_defend_or_exchange(lobby_name, "None")
         
-            if (choice == "defense"): # Quiere defenderse
+            if (choice == 'defense'): # Quiere defenderse
                 game_repo.set_game_status(lobby_name, "defend_exchange")
                 await manager.send_message(user_finish, f"defend_exchange, {user_start}")
             else: # No quiere defenderse
@@ -231,7 +232,8 @@ async def game_flow(lobby_name : str):
 
             match effect_to_be_applied:
                 case 'Aterrador':
-                    await manager.send_message(user_finish, f"aterrador, {user_start}, {card_start}")
+                    card_start_name = card_repo.get_card_name(card_start)
+                    await manager.send_message(user_finish, f"aterrador, {user_start}, {card_start_name}")
                 case 'Fallaste': #! Sprint 3
                     pass
             
@@ -705,7 +707,6 @@ async def play_card(request: PlayCardBase):
         game_repo.set_effect_to_be_applied(lobby_name, card_name)
         game_repo.set_target_to_be_afflicted(lobby_name, target_user_name)
         await game_flow(lobby_name)
-        return {'message' : 'Card played successfully'}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while playing the card')
@@ -758,9 +759,9 @@ async def defend_or_exchange(request: ChoiceBase):
     
     try:
         if (choice == "defense"):
-            game_repo.set_defend_or_skip(lobby_name, "defense")
+            game_repo.set_defend_or_exchange(lobby_name, "defense")
         else:
-            game_repo.set_defend_or_skip(lobby_name, "exchange")
+            game_repo.set_defend_or_exchange(lobby_name, "exchange")
         await game_flow(lobby_name)
     except Exception as e:
         print(e)
