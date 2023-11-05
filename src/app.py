@@ -1,22 +1,322 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from connection import ConnectionManager
 from repository import *
 from util import *
+from basemodels import *
 
 app = FastAPI()
-
-origins = ["http://localhost:5173"]
+manager = ConnectionManager()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+#! Tareas por hacer en Back
+'''
+Refactorizar util.py y repository.py
+Refactorizar todo lo relacionado a Positions (Debuggear las cartas de Puerta Atrancada, Cuarentena y Hacha)
+Revisar que la selección de targets cumplan con las reglas (Ver Mensaje Pinneado)
+Mejorar tema de la Victoria
+Implementar Fallaste
+Implementar Cita a Ciegas, Queda entre Nosotros y Opps!
+Hacer Testing
+Mejorar Logica: Si se descubre que la Cosa tiene el lanzallamas, se descubre que es la Cosa 
+                Cambiar para que no ocurra intercambio si el objetivo esta en cuarentena
+Hacer clang formating al codigo
+'''
+
+async def exchange_stage(lobby_name : str, user_start : str, user_finish : str):
+    game_repo = GameRepository()
+    game_logic = GameLogic()
+    superinfection = game_logic.exchange_with_superinfection(user_start, user_finish)
+    obstacle = game_logic.is_there_obstacle(lobby_name, user_start)
+
+    if (obstacle): # Hay obstaculo
+        await end_turn(lobby_name)
+    elif (superinfection): # Hay superinfeccion
+        if (game_logic.superinfection(user_start)):
+            game_logic.play_card(lobby_name, user_finish, user_start, "Lanzallamas")
+            await manager.broadcast_to_lobby_users(lobby_name, f"superinfection, {user_start}")
+        else:
+            game_logic.play_card(lobby_name, user_start, user_finish, "Lanzallamas")
+            await manager.broadcast_to_lobby_users(lobby_name, f"superinfection, {user_finish}")
+
+        victory = game_logic.victory(lobby_name) 
+
+        if (victory):
+            list_winners = game_logic.list_winners(lobby_name)
+            await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
+            await manager.broadcast_to_lobby_users(lobby_name, f"winners, {list_winners}")
+            await manager.remove_all_user_from_lobby(lobby_name)
+            game_logic.end_game(lobby_name)
+        else:
+            await end_turn(lobby_name)
+
+    else: # Hay intercambio de cartas
+        game_repo.set_game_status(lobby_name, "start_exchange")
+        await manager.send_message(user_start, f"start_exchange, {user_finish}")
+
+async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_applied : str):
+    game_repo = GameRepository()
+    game_logic = GameLogic()
+    user_repo = UserRepository()
+    card_repo = CardRepository()
+    user_turn = game_repo.get_turn_user(lobby_name)
+    user_finish = game_logic.next_player(lobby_name, user_turn)
+
+    match effect_to_be_applied:
+        case 'Seduccion':
+            user_finish = target_user_name
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+        
+        # Mensaje con id de la carta aleatoria que mira
+        case 'Sospecha':
+            random_card = user_repo.get_random_card_from_hand(target_user_name)
+            card_name = card_repo.get_card_name(random_card)
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+            await manager.send_message(user_turn, f"sospecha, {target_user_name}, {card_name}")
+
+        # Mensaje con una LISTA de ids de cartas de su mano que le muestra al resto de jugadores
+        case 'Whisky':
+            user_cards = user_repo.get_user_cards(user_turn)
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
+            await manager.broadcast_to_lobby_users(lobby_name, f"whisky, {user_turn}, {user_cards}")
+
+        # Mensaje con una LISTA de ids de cartas del objetivo
+        case 'Analisis':
+            user_cards = user_repo.get_user_cards(target_user_name)
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+            await manager.send_message(user_turn, f"analisis, {target_user_name}, {user_cards}")
+        
+        case 'Mas vale que corras' | 'Cambio de lugar':
+            game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+            user_finish = game_logic.next_player(lobby_name, user_turn)
+
+        case _:
+            game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+            user_finish = game_logic.next_player(lobby_name, user_turn)
+    
+    game_repo.set_effect_to_be_applied(lobby_name, "None")
+    game_repo.set_target_to_be_afflicted(lobby_name, "None")
+    victory = game_logic.victory(lobby_name) 
+    
+    if (victory):
+        list_winners = game_logic.list_winners(lobby_name)
+        await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
+        await manager.broadcast_to_lobby_users(lobby_name, f"winners, {list_winners}")
+        await manager.remove_all_user_from_lobby(lobby_name)
+        game_logic.end_game(lobby_name)
+    else:
+        await exchange_stage(lobby_name, user_turn, user_finish)
+
+async def end_turn(lobby_name : str):
+    game_repo = GameRepository()
+    game_logic = GameLogic()
+    user_repo = UserRepository()
+    user_turn = game_repo.get_turn_user(lobby_name)
+
+    if (user_repo.is_user_in_quarantine(user_turn)):
+        user_repo.decrease_quarantine(user_turn)
+
+    direction = game_repo.get_direction(lobby_name)
+    game_logic.next_turn(lobby_name, direction)
+    user_next_turn = game_repo.get_turn_user(lobby_name)
+    game_repo.set_game_status(lobby_name, "steal_card_stage")
+        
+    await manager.send_message(user_turn, f"turn_ended")
+    await manager.broadcast_to_lobby_users(lobby_name, f"turn, {user_next_turn}")
+    await manager.send_message(user_next_turn, f"steal_card_stage, {user_next_turn}")
+
+async def game_flow(lobby_name : str): 
+    lobby_repo = LobbyRepository()
+    game_repo = GameRepository()
+    card_repo = CardRepository()
+    game_logic = GameLogic()
+    game_status = game_repo.get_game_status(lobby_name)
+    user_turn = game_repo.get_turn_user(lobby_name)
+
+    match game_status:
+        case 'game_not_started':
+            if (lobby_repo.is_everyone_ready(lobby_name)):
+                lobby_repo.set_everyone_ready_false(lobby_name)
+                game_repo.set_game_status(lobby_name, "steal_card_stage")
+                await manager.broadcast_to_lobby_users(lobby_name, f"turn, {user_turn}")
+                await manager.send_message(user_turn, f"steal_card_stage")
+
+        case 'steal_card_stage':
+            game_repo.set_game_status(lobby_name, "discard_or_play")
+            await manager.send_message(user_turn, f"discard_or_play")
+
+        case 'discard_or_play':
+            choice = game_repo.get_discard_or_play(lobby_name)
+            game_repo.set_discard_or_play(lobby_name, "None")
+
+            if (choice == 'discard'): # Descartar
+                user_next_turn = game_logic.next_player(lobby_name, user_turn)
+                await exchange_stage(lobby_name, user_turn, user_next_turn)
+            else: # Jugar
+                target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
+                effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)
+                defense = game_logic.can_user_defend_play(target_user_name, effect_to_be_applied)
+
+                if (defense): # El target puede defenderse 
+                    game_repo.set_game_status(lobby_name, "defend_or_skip")
+                    await manager.send_message(user_turn, f"waiting_target_defense")
+                    await manager.send_message(target_user_name, f"defend_or_skip, {user_turn}, {effect_to_be_applied}")
+                else: # El target no puede defenderse
+                    await applied_effect(lobby_name, target_user_name, effect_to_be_applied)
+   
+        case 'defend_or_skip':
+            choice = game_repo.get_defend_or_skip(lobby_name)
+            target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
+            effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)
+
+            if (game_repo.get_defend_or_skip(lobby_name) == "skip"): # No quiere defenderse
+                game_repo.set_defend_or_skip(lobby_name, "None")    #!seteamos despues de preguntar lo q tenia
+                await applied_effect(lobby_name, target_user_name, effect_to_be_applied)
+            else: # Quiere defenderse
+                game_repo.set_defend_or_skip(lobby_name, "None")
+                game_repo.set_game_status(lobby_name, "defend_play")
+                await manager.send_message(target_user_name, f"defend_play, {user_turn}, {effect_to_be_applied}")
+
+        case 'defend_play':
+            target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
+            game_repo.set_effect_to_be_applied(lobby_name, "None")
+            game_repo.set_target_to_be_afflicted(lobby_name, "None")
+            game_repo.set_game_status(lobby_name, "steal_after_defend")
+
+            await manager.broadcast_to_lobby_users(lobby_name, f"defense_play, {target_user_name}")
+            await manager.send_message(target_user_name, f"steal_after_defend, {target_user_name}")
+
+        case 'steal_after_defend':
+            user_next_turn = game_logic.next_player(lobby_name, user_turn)
+            await exchange_stage(lobby_name, user_turn, user_next_turn)
+            
+        case 'start_exchange':
+            user_start = game_repo.get_exchange_user_start(lobby_name)
+            user_finish = game_repo.get_exchange_user_finish(lobby_name)
+            defense = game_logic.can_user_defend_exchange(user_finish)
+            await manager.send_message(user_start, f"waiting_for_exchange")
+
+            if (defense): # Se puede defender
+                game_repo.set_game_status(lobby_name, "defend_or_exchange")
+                await manager.send_message(user_finish, f"defend_or_exchange, {user_start}")
+            else: # No se puede defender
+                game_repo.set_game_status(lobby_name, "finish_exchange")
+                await manager.send_message(user_finish, f"finish_exchange, {user_start}")
+
+        case 'defend_or_exchange':
+            user_start = game_repo.get_exchange_user_start(lobby_name)
+            user_finish = game_repo.get_exchange_user_finish(lobby_name)
+            choice = game_repo.get_defend_or_exchange(lobby_name)
+        
+            if (choice == 'defense'): # Quiere defenderse
+                game_repo.set_game_status(lobby_name, "defend_exchange")
+                await manager.send_message(user_finish, f"defend_exchange, {user_start}")
+            else: # No quiere defenderse
+                game_repo.set_game_status(lobby_name, "finish_exchange")
+                await manager.send_message(user_finish, f"finish_exchange, {user_start}")
+
+        case 'defend_exchange':
+            effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)
+            user_start = game_repo.get_exchange_user_start(lobby_name)
+            user_finish = game_repo.get_exchange_user_finish(lobby_name)
+            card_start = game_repo.get_exchange_card_user_start(lobby_name)
+
+            match effect_to_be_applied:
+                case 'Aterrador':
+                    card_start_name = card_repo.get_card_name(card_start)
+                    await manager.send_message(user_finish, f"aterrador, {user_start}, {card_start_name}")
+                case 'Fallaste': #! Sprint 3
+                    pass
+            
+            game_repo.clean_exchange_data(lobby_name)
+            game_repo.set_effect_to_be_applied(lobby_name, "None")
+            game_repo.set_game_status(lobby_name, "steal_after_exchange")
+
+            await manager.broadcast_to_lobby_users(lobby_name, f"defense_play, {user_finish}")
+            await manager.send_message(user_finish, f"steal_after_exchange")
+
+        case 'steal_after_exchange':
+            await end_turn(lobby_name)
+
+        case 'finish_exchange':
+            game_repo.clean_exchange_data(lobby_name)
+            game_repo.set_effect_to_be_applied(lobby_name, "None")
+            victory = game_logic.victory(lobby_name)
+
+            if (victory):
+                list_winners = game_logic.list_winners(lobby_name)
+                await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
+                await manager.broadcast_to_lobby_users(lobby_name, f"winners, {list_winners}")
+                await manager.remove_all_user_from_lobby(lobby_name)
+                game_logic.end_game(lobby_name)
+            else:
+                await end_turn(lobby_name)
+
+@app.websocket('/websocket/{user_name}')
+async def lobby_listing(websocket: WebSocket, user_name: str):
+    user_repo = UserRepository()
+    lobby_repo = LobbyRepository()
+    game_logic = GameLogic()
+
+    await manager.connect(websocket, user_name)
+    try:
+        while True:
+            pass
+            message = await manager.receive_message(user_name)
+            is_in_lobby = user_repo.is_user_in_a_lobby(user_name)
+
+            if (is_in_lobby):
+                lobby_name = user_repo.get_user_lobby(user_name)
+                await manager.broadcast_to_lobby_users(lobby_name, f"chat_msg, {user_name}, {message}")
+            else:
+                raise HTTPException(status_code=401, detail='This user is not in a lobby')
+            
+    except WebSocketDisconnect:
+
+        is_in_lobby = user_repo.is_user_in_a_lobby(user_name)
+
+        if (not is_in_lobby):
+            await manager.disconnect(user_name)
+        else:
+            lobby_name = user_repo.get_user_lobby(user_name)
+
+            if (lobby_repo.is_game_started(lobby_name)):
+                await manager.disconnect(user_name)
+                await manager.broadcast_to_lobby_users(lobby_name, f"user_disconnect_in_game, {user_name}")
+                await manager.remove_all_user_from_lobby(lobby_name)
+                game_logic.end_game(lobby_name)                
+            else:
+                if (user_repo.is_user_host(lobby_name, user_name) and lobby_repo.get_amount_users(lobby_name) == 1):
+                    lobby_repo.leave_lobby(lobby_name, user_name)
+                    await manager.disconnect(user_name)
+                    await manager.broadcast_to_users_with_no_lobby(f"lobby_close, {lobby_name}")
+                elif (user_repo.is_user_host(lobby_name, user_name)):
+                    lobby_repo.leave_lobby(lobby_name, user_name)
+                    await manager.disconnect(user_name)
+                    await manager.broadcast_to_lobby_users(lobby_name, f"lobby_close")
+                    await manager.remove_all_user_from_lobby(lobby_name)
+                    await manager.broadcast_to_users_with_no_lobby(f"lobby_close, {lobby_name}")
+                else:
+                    lobby_repo.leave_lobby(lobby_name, user_name)
+                    await manager.disconnect(user_name)
+                    await manager.broadcast_to_lobby_users(lobby_name, f"user_disconnect, {user_name}")
+                    total_users = lobby_repo.get_amount_users(lobby_name)
+                    await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
+                    
+        user_repo.remove_user(user_name)
+
 @app.post('/create_user/')
-async def create_user(user_name: str):
+async def create_user(user: UserBase):
+    user_name = user.user_name
     user_repo = UserRepository()
     
     if user_repo.user_exists(user_name):
@@ -28,9 +328,25 @@ async def create_user(user_name: str):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while creating the user')
+    
+@app.get('/is_user_exist/{user_name}')
+async def is_user_exist(user_name: str):
+    user_repo = UserRepository()
+    
+    try:
+        result = user_repo.user_exists(user_name)
+        return {'exist': result}
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while checking if user exist')
 
 @app.post('/create_lobby/')
-async def create_lobby(lobby_name: str, min_players: int, max_players: int, password: str, host_name: str):
+async def create_lobby(lobby: CreateLobbyBase):
+    lobby_name = lobby.lobby_name
+    min_players = lobby.min_players
+    max_players = lobby.max_players
+    password = lobby.password
+    host_name = lobby.host_name
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
 
@@ -45,13 +361,41 @@ async def create_lobby(lobby_name: str, min_players: int, max_players: int, pass
     
     try:
         lobby_repo.create_lobby(lobby_name, min_players, max_players, password, host_name)
+        total_users = lobby_repo.get_amount_users(lobby_name)
+        is_private = lobby_repo.is_lobby_private(lobby_name)
+        await manager.add_user_to_lobby(lobby_name, host_name)
+        await manager.broadcast_to_users_with_no_lobby(f"new_lobby, {lobby_name}, {total_users}, {max_players}, {is_private}")
         return {'message': 'Lobby created'}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while creating the lobby')
-        
+    
+@app.get('/is_lobby_exist/{lobby_name}')
+async def is_lobby_exist(lobby_name: str):
+    lobby_repo = LobbyRepository()
+    
+    try:
+        result = lobby_repo.lobby_exists(lobby_name)
+        return {'exist': result}
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while checking if lobby exist')
+
+@app.get('/joinable_lobbies/')
+async def get_joinable_lobbies():
+    lobby_repo = LobbyRepository()
+    
+    try:
+        return lobby_repo.get_joinable_lobby_listings()
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while getting the joinable lobbies')
+
 @app.post('/join_lobby/')
-async def join_lobby(lobby_name: str, user_name: str, password: str):
+async def join_lobby(request: JoinLobbyBase):
+    lobby_name = request.lobby_name
+    password = request.password
+    user_name = request.user_name
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
 
@@ -75,30 +419,71 @@ async def join_lobby(lobby_name: str, user_name: str, password: str):
     
     try:
         lobby_repo.add_user_to_lobby(lobby_name, user_name)
+        total_users = lobby_repo.get_amount_users(lobby_name)
+        await manager.broadcast_to_lobby_users(lobby_name, f"user_connect, {user_name}")
+        await manager.add_user_to_lobby(lobby_name, user_name)
+        await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
         return {'message': 'Joined lobby'}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while joining the lobby')
-    
+
 @app.get('/lobby_users/{lobby_name}')
-async def get_lobby_users(lobby_name: str, user_name: str):
+async def get_lobby_users(lobby_name: str):
     lobby_repo = LobbyRepository()
-    user_repo = UserRepository()
     
     if not (lobby_repo.lobby_exists(lobby_name)):
         raise HTTPException(status_code=404, detail='This lobby name does not exist')
-    
-    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
-        raise HTTPException(status_code=401, detail='This user is not in the lobby')
     
     try:
         return lobby_repo.get_lobby_users(lobby_name)
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail='An error occurred while getting the lobby users')
+        raise HTTPException(status_code=500, detail='An error occurred while getting the lobby users')    
+
+@app.post('/leave_lobby/')
+async def leave_lobby(request: LobbyBase):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
+    user_repo = UserRepository()
+    lobby_repo = LobbyRepository()
+
+    if not (lobby_repo.lobby_exists(lobby_name)):
+        raise HTTPException(status_code=404, detail='This lobby name does not exist')
+
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='This user is not in the lobby')
+
+    if (lobby_repo.is_game_started(lobby_name)):
+        raise HTTPException(status_code=406, detail='This game has already started')
+    
+    try:
+        if (user_repo.is_user_host(lobby_name, user_name) and lobby_repo.get_amount_users(lobby_name) == 1):
+            lobby_repo.leave_lobby(lobby_name, user_name)
+            await manager.remove_all_user_from_lobby(lobby_name)
+            await manager.broadcast_to_users_with_no_lobby(f"lobby_close, {lobby_name}")
+        elif (user_repo.is_user_host(lobby_name, user_name)):
+            lobby_repo.leave_lobby(lobby_name, user_name)
+            await manager.remove_user_from_lobby(lobby_name, user_name)
+            await manager.broadcast_to_lobby_users(lobby_name, f"lobby_close")
+            await manager.remove_all_user_from_lobby(lobby_name)
+            await manager.broadcast_to_users_with_no_lobby(f"lobby_close, {lobby_name}")
+        else:
+            lobby_repo.leave_lobby(lobby_name, user_name)
+            await manager.remove_user_from_lobby(lobby_name, user_name)
+            await manager.broadcast_to_lobby_users(lobby_name, f"user_disconnect, {user_name}")
+            total_users = lobby_repo.get_amount_users(lobby_name)
+            await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
+            
+        return  {'message': 'User left lobby successfully'}
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while leaving the lobby')
 
 @app.post('/start_game/')
-async def start_game(lobby_name: str, host_name: str):
+async def start_game(request: LobbyBase):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
     game_logic = GameLogic()
@@ -109,7 +494,7 @@ async def start_game(lobby_name: str, host_name: str):
     if not (lobby_repo.can_start_game(lobby_name)):
         raise HTTPException(status_code=406, detail='This lobby does not have enough players')
     
-    if not (user_repo.is_user_host(lobby_name, host_name)):
+    if not (user_repo.is_user_host(lobby_name, user_name)):
         raise HTTPException(status_code=401, detail='This user is not the host of the lobby')
     
     if (lobby_repo.is_game_started(lobby_name)):
@@ -117,39 +502,37 @@ async def start_game(lobby_name: str, host_name: str):
 
     try:
         game_logic.start_game(lobby_name)
-        return {'message': 'Game started successfully'}
+        await manager.broadcast_to_lobby_users(lobby_name, f"game_start")
+        await manager.broadcast_to_users_with_no_lobby(f"game_start, {lobby_name}")
+        await game_flow(lobby_name)
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while starting the game')
 
-@app.get('/is_lobby_exist/{lobby_name}')
-async def is_lobby_exist(lobby_name: str):
+@app.post('/ready/')
+async def ready(request: LobbyBase):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
+    user_repo = UserRepository()
     lobby_repo = LobbyRepository()
-    
-    try:
-        result = lobby_repo.lobby_exists(lobby_name)
-        return {'exist': result}
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail='An error occurred while checking if lobby exist')
-    
 
-# Endpoints para obtener información del juego
-@app.get('/is_game_started/{lobby_name}')
-async def is_game_started(lobby_name: str):
-    lobby_repo = LobbyRepository()
-    
     if not (lobby_repo.lobby_exists(lobby_name)):
         raise HTTPException(status_code=404, detail='This lobby name does not exist')
     
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='This user is not in the lobby')
+    
+    if (not lobby_repo.is_game_started(lobby_name)):
+        raise HTTPException(status_code=406, detail='This game has not started')
+
     try:
-        result = lobby_repo.is_game_started(lobby_name)
-        return {'started': result}
+        user_repo.set_user_ready(user_name, True)
+        await game_flow(lobby_name)
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail='An error occurred while checking if the game is started')
+        raise HTTPException(status_code=500, detail='An error occurred while setting the user as ready')
 
-@app.get('/get_users_position/{lobby_name}')
+@app.get('/users_position/{lobby_name}') #! Cambiar a futuro, en sprint 3
 async def get_users_position(lobby_name: str, user_name: str):
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
@@ -169,8 +552,8 @@ async def get_users_position(lobby_name: str, user_name: str):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the users position')
-    
-@app.get('/get_user_hand/{user_name}') 
+
+@app.get('/user_hand/{lobby_name}/{user_name}') 
 async def get_user_hand(lobby_name: str, user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()  
@@ -190,10 +573,34 @@ async def get_user_hand(lobby_name: str, user_name: str):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while getting the hand')
 
-@app.get('/steal_card_from_deck/{lobby_name}') 
-async def steal_card_from_deck(lobby_name: str, user_name: str):
+@app.get('/user_cards_info/{lobby_name}/{user_name}') 
+async def get_play_combinations(lobby_name: str, user_name: str):
+    user_repo = UserRepository()
+    lobby_repo = LobbyRepository()
+    game_logic = GameLogic()  
+    
+    if not (lobby_repo.lobby_exists(lobby_name)):
+        raise HTTPException(status_code=404, detail='This lobby name does not exist')
+    
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='This user is not in the lobby')
+    
+    if not (lobby_repo.is_game_started(lobby_name)):
+        raise HTTPException(status_code=406, detail='This game has not started yet')
+    
+    try:
+        return game_logic.get_play_combinations(user_name, lobby_name)
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while getting the hand')
+
+@app.post('/steal_card/')
+async def steal_card(request: LobbyBase):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
+    game_repo = GameRepository()
     game_logic = GameLogic()
     
     if not (lobby_repo.lobby_exists(lobby_name)):
@@ -205,45 +612,207 @@ async def steal_card_from_deck(lobby_name: str, user_name: str):
     if not (lobby_repo.is_game_started(lobby_name)):
         raise HTTPException(status_code=406, detail='This game has not started yet')
     
-    # En esta sprint solo se puede robar cartas en tu turno
-    if not (user_repo.is_user_turn(lobby_name, user_name)):
-        raise HTTPException(status_code=401, detail='It is not your turn')
-    
-    # En esta sprint solo se puede robar una carta si tienes menos de 5
-    if (user_repo.get_total_cards(user_name) >= 5):
-        raise HTTPException(status_code=406, detail='This user already has 5 cards')
-    
     try:
-        return game_logic.steal_card_from_deck(user_name) #! Esto deberia estar en el game_logic
+        if (game_repo.get_game_status(lobby_name) == 'steal_card_stage'):
+            card_dict = game_logic.steal_card_from_deck(user_name) 
+        else:   
+            card_dict = game_logic.steal_card_from_deck_no_panic(user_name)
+        
+        if (user_repo.is_user_in_quarantine(user_name)):
+            await manager.broadcast_to_lobby_users(lobby_name, f"steal_card, {user_name}, {card_dict['name']}")
+        else:
+            await manager.broadcast_to_lobby_users(lobby_name, f"steal_card, {user_name}")
+
+        await game_flow(lobby_name)
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while stealing a card')
 
-@app.get('/is_my_turn/{user_name}')
-async def is_my_turn(lobby_name: str, user_name: str):
+@app.post('/discard_card/')
+async def discard_card(request: CardBase):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
+    id_card = request.card_id
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
+    card_repo = CardRepository()
+    game_logic = GameLogic()
+    game_repo = GameRepository()
     
     if not (lobby_repo.lobby_exists(lobby_name)):
         raise HTTPException(status_code=404, detail='This lobby name does not exist')
     
+    if not (lobby_repo.is_game_started(lobby_name)):
+        raise HTTPException(status_code=406, detail='This game has not started yet')
+
     if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
         raise HTTPException(status_code=401, detail='This user is not in the lobby')
+
+    if not (user_repo.check_user_has_card(user_name, id_card)):
+        raise HTTPException(status_code=401, detail='This user does not have this card')
+    
+    if not (user_repo.is_user_turn(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='It is not your turn')
+    
+    if not (game_logic.can_card_be_discarded(user_name, id_card)):
+        raise HTTPException(status_code=406, detail='This card cannot be discarded')
+    
+    try:
+        game_logic.discard_card(user_name, id_card)
+
+        if (user_repo.is_user_in_quarantine(user_name)):
+            card_dict = card_repo.get_card_dict(id_card)
+            await manager.broadcast_to_lobby_users(lobby_name, f"discard_card, {user_name}, {card_dict['name']}")
+        else:
+            await manager.broadcast_to_lobby_users(lobby_name, f"discard_card, {user_name}")
+
+        game_repo.set_discard_or_play(lobby_name, "discard")
+        await game_flow(lobby_name)
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while discarding the card')
+
+#! Suponemos que el Front elige la combinacion correcta
+@app.post('/play_card/')
+async def play_card(request: PlayCardBase):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
+    target_user_name = request.target_user_name
+    card_id = request.card_id
+    user_repo = UserRepository()
+    lobby_repo = LobbyRepository()
+    game_logic = GameLogic()
+    game_repo = GameRepository()
+    card_repo = CardRepository()
+    
+    if not (lobby_repo.lobby_exists(lobby_name)):
+        raise HTTPException(status_code=404, detail='This lobby name does not exist')
+    
+    if not (lobby_repo.is_game_started(lobby_name)):
+        raise HTTPException(status_code=406, detail='This game has not started yet')
+
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='This user is not in the lobby')
+    
+    if not (user_repo.check_user_has_card(user_name, card_id)):
+        raise HTTPException(status_code=401, detail='This user does not have this card')
+    
+    if not (user_repo.is_user_turn(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='It is not your turn')
+
+    try:
+        game_logic.discard_card(user_name, card_id)
+        card_name = card_repo.get_card_name(card_id)
+        game_repo.set_discard_or_play(lobby_name, "play")
+        game_repo.set_effect_to_be_applied(lobby_name, card_name)
+        game_repo.set_target_to_be_afflicted(lobby_name, target_user_name)
+        await game_flow(lobby_name)
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while playing the card')
+
+@app.post('/defend_or_skip/')
+async def defend_or_skip(request: ChoiceBase):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
+    choice = request.choice
+    user_repo = UserRepository()
+    lobby_repo = LobbyRepository()
+    game_repo = GameRepository()
+
+    if not (lobby_repo.lobby_exists(lobby_name)):
+        raise HTTPException(status_code=404, detail='This lobby name does not exist')
     
     if not (lobby_repo.is_game_started(lobby_name)):
         raise HTTPException(status_code=406, detail='This game has not started yet')
     
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='This user is not in the lobby')
+    
     try:
-        result = user_repo.is_user_turn(lobby_name, user_name) 
-        return {'turn': result}
+        if (choice == "defense"):
+            game_repo.set_defend_or_skip(lobby_name, "defense")
+        else:
+            game_repo.set_defend_or_skip(lobby_name, "skip")
+        await game_flow(lobby_name)
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail='An error occurred while checking if it is the user turn')
+        raise HTTPException(status_code=500, detail='An error occurred while choosing defend or skip')
 
-@app.post('/play_card/')
-async def play_card(lobby_name: str, user_name: str, target_user_name: str, id_card: int):
+@app.post('/defend_or_exchange/')
+async def defend_or_exchange(request: ChoiceBase):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
+    choice = request.choice
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
+    game_repo = GameRepository()
+
+    if not (lobby_repo.lobby_exists(lobby_name)):
+        raise HTTPException(status_code=404, detail='This lobby name does not exist')
+    
+    if not (lobby_repo.is_game_started(lobby_name)):
+        raise HTTPException(status_code=406, detail='This game has not started yet')
+    
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='This user is not in the lobby')
+    
+    try:
+        if (choice == "defense"):
+            game_repo.set_defend_or_exchange(lobby_name, "defense")
+        else:
+            game_repo.set_defend_or_exchange(lobby_name, "exchange")
+        await game_flow(lobby_name)
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while choosing defend or exchange')
+
+@app.post('/defense_card/')
+async def defense_card(request: CardBase):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
+    card_id = request.card_id
+    user_repo = UserRepository()
+    lobby_repo = LobbyRepository()
+    game_logic = GameLogic()
+    game_repo = GameRepository()
+    card_repo = CardRepository()
+    card_name = card_repo.get_card_name(card_id)
+    
+    if not (lobby_repo.lobby_exists(lobby_name)):
+        raise HTTPException(status_code=404, detail='This lobby name does not exist')
+    
+    if not (lobby_repo.is_game_started(lobby_name)):
+        raise HTTPException(status_code=406, detail='This game has not started yet')
+
+    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
+        raise HTTPException(status_code=401, detail='This user is not in the lobby')
+    
+    if not (user_repo.check_user_has_card(user_name, card_id)):
+        raise HTTPException(status_code=401, detail='This user does not have this card')
+
+    if not (game_logic.can_card_cancel_effect(lobby_name, card_name)):
+        raise HTTPException(status_code=401, detail='This card cannot cancel the effect')
+
+    try:
+        game_repo.set_effect_to_be_applied(lobby_name, card_name)
+        game_logic.discard_card(user_name, card_id)
+        await game_flow(lobby_name)
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail='An error occurred while defending the card')
+       
+#! Suponemos que el front eligio correctamente al usuario   
+@app.post('/swap_card/')
+async def swap_card(request: PlayCardBase):
+    lobby_name = request.lobby_name
+    user_name = request.user_name
+    target_user_name = request.target_user_name
+    card_id = request.card_id
+    user_repo = UserRepository()
+    lobby_repo = LobbyRepository()
+    card_repo = CardRepository()
+    game_repo = GameRepository()
     game_logic = GameLogic()
     
     if not (lobby_repo.lobby_exists(lobby_name)):
@@ -258,45 +827,59 @@ async def play_card(lobby_name: str, user_name: str, target_user_name: str, id_c
     if not (user_repo.is_target_in_lobby(lobby_name, target_user_name)): 
         raise HTTPException(status_code=401, detail='This target user is not in the lobby')
     
-    if not (user_repo.is_target_alive(target_user_name)):
-        raise HTTPException(status_code=401, detail='This target user is not alive')
-    
-    # En esta sprint solo se puede jugar cartas en tu turno (no hay cartas de defensa)
-    if not (user_repo.is_user_turn(lobby_name, user_name)):
-        raise HTTPException(status_code=401, detail='It is not your turn')
-    
-    # En esta sprint solo se puede jugar una carta si se tienen 5
-    if (user_repo.get_total_cards(user_name) < 5):
-        raise HTTPException(status_code=406, detail='This user does not have 5 cards')
-
-    if not (user_repo.check_user_has_card(user_name, id_card)):
+    if not (user_repo.check_user_has_card(user_name, card_id)):
         raise HTTPException(status_code=401, detail='This user does not have this card')
     
+    if not (game_logic.validate_swap_card(user_name, card_id, target_user_name)):
+        raise HTTPException(status_code=406, detail='You cannot swap this card')
+    
     try:
-        game_logic.play_card(user_name, id_card, lobby_name)
-        return  {'message': 'Card played successfully'}
+        if (not game_repo.is_there_exchange_offer(lobby_name)): # No hay intercambio iniciado
+            game_repo.set_exchange_card_start(lobby_name, card_id)
+            game_repo.set_exchange_user_start(lobby_name, user_name)
+            game_repo.set_exchange_user_finish(lobby_name, target_user_name)
+            game_repo.set_effect_to_be_applied(lobby_name, "swap_card")
+        else: # Hay intercambio iniciado
+            game_repo.set_exchange_card_finish(lobby_name, card_id)
+            game_logic.swap_card(lobby_name)
+            user_start = game_repo.get_exchange_user_start(lobby_name)
+            user_finish = game_repo.get_exchange_user_finish(lobby_name)
+            card_start = game_repo.get_exchange_card_user_start(lobby_name)
+            card_finish = game_repo.get_exchange_card_user_finish(lobby_name)
+            
+            if (user_repo.is_user_in_quarantine(user_start)): # Usuario que inicio el intercambio esta en cuarentena
+                card_dict = card_repo.get_card_dict(card_start)
+                await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_start}, {user_finish}, {card_dict['name']}")
+            else: 
+                await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_start}, {user_finish}")
+                
+            if (user_repo.is_user_in_quarantine(user_finish)): # Usuario que acepto el intercambio esta en cuarentena
+                card_dict = card_repo.get_card_dict(card_finish)
+                await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_finish}, {user_start}, {card_dict['name']}")
+            else:
+                await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_finish}, {user_start}")
+            
+        await game_flow(lobby_name)  
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail='An error occurred while playing the card')
-
-@app.post('/end_game/')
-async def end_game(lobby_name: str, user_name: str):
+        raise HTTPException(status_code=500, detail='An error occurred while swapping the card')
+    
+@app.get('/get_user_role/{lobby_name}/{user_name}')
+async def get_user_role(lobby_name: str, user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
-    game_logic = GameLogic()
-    
+    game_repo = GameRepository()
+    if not (user_repo.user_exists(user_name)):
+        raise HTTPException(status_code=404, detail='This user does not exist')
     if not (lobby_repo.lobby_exists(lobby_name)):
         raise HTTPException(status_code=404, detail='This lobby name does not exist')
-    
-    if not (lobby_repo.is_game_started(lobby_name)):
-        raise HTTPException(status_code=406, detail='This game has not started yet')
-
     if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
         raise HTTPException(status_code=401, detail='This user is not in the lobby')
-     
+    if not (lobby_repo.is_game_started(lobby_name)):
+        raise HTTPException(status_code=406, detail='This game has not started')
     try:
-        game_logic.end_game(lobby_name)
-        return  {'message': 'Game ended successfully'}
+        role = user_repo.get_role(user_name)
+        return {'role': role}
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail='An error occurred while ending the game')
+        raise HTTPException(status_code=500, detail='An internal error occurred')

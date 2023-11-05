@@ -1,9 +1,6 @@
-#----------------------------------ALÉJATE -------------------------------------
-#-------------------------------------------------------------------------------
-
 #CONTAGIO ---------------------------------------------------------------------
 La_cosa = {
-    "card_name" : "La cosa",
+    "card_name" : "Cosa",
     "card_type" : "Contagio",
     "quantity_numb_players" : [1, 1, 1, 1, 1, 1, 1, 1, 1]
 }
@@ -76,6 +73,7 @@ Whisky = {
     "quantity_numb_players" : [1, 1, 2, 2, 2, 2, 3, 3, 3]
 }
 
+
 #DEFENSA ----------------------------------------------------------------------
 Aterrador = {
     "card_name" : "Aterrador",
@@ -98,7 +96,8 @@ No_gracias = {
 Fallaste = {
     "card_name" : "Fallaste",
     "card_type" : "Defensa",
-    "quantity_numb_players" : [1, 1, 2, 2, 2, 2, 2, 3, 3]
+    "quantity_numb_players" : [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    #"quantity_numb_players" : [1, 1, 2, 2, 2, 2, 2, 3, 3]
 }
 
 Nada_de_barbacoas = {
@@ -122,10 +121,7 @@ Puerta_trancada = {
 }
 
 
-
-#----------------------------------PÁNICO--------------------------------------
-#-------------------------------------------------------------------------------
-
+#PÁNICO-------------------------------------------------------------------------
 Cuerdas_podridas = {
     "card_name" : "Cuerdas podridas",
     "card_type" : "Panico",
@@ -198,7 +194,7 @@ Revelaciones = {
     "quantity_numb_players" : [0, 0, 0, 0, 1, 1, 1, 1, 1]
 }
 
-# ------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 ALL_TEMPLATES = [La_cosa, Infectado, Lanzallamas, Analisis, Hacha, Sospecha, 
                  Determinacion, Vigila_tus_espaldas, Cambio_de_lugar, 
                  Mas_vale_que_corras, Seduccion, Whisky, Aterrador, 

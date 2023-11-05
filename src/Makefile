@@ -15,15 +15,23 @@ clean_cache:
 	@find . -type d -name "__pycache__" -exec rm -rf {} +
 	@rm -rf .pytest_cache
 
+clean_all: clean_db clean_cache
+
 run_app: clean_db clean_cache
 	@echo "Running uvicorn..."
 	@uvicorn app:app --reload
 
 run_unit_tests:
-	pytest -m "not integration_test"
+	pytest -m "not integration_test and not end2end_test"
 
 run_integration_tests:
 	ENVIRONMENT=test python tests/populate_test_db.py
 	pytest -m integration_test -vv
+	rm database_test.sqlite
+	unset ENVIRONMENT
+
+run_end2end_tests:
+	ENVIRONMENT=test python tests/populate_test_db.py
+	pytest -m end2end_test -vv
 	rm database_test.sqlite
 	unset ENVIRONMENT
