@@ -16,19 +16,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#! Tareas por hacer
-# Revisar el codigo de util.py, repository.py, app.py
-# Revisar que se cumplan las reglas de los targets del juego
-# Revisar Tests
-# Mejorar el tema de la victoria
-
-#! Quedan para proxima sprint
-# Fallaste
-# Refactorizar todo lo que es posiciones
-# Si se descubre que la Cosa tiene el lanzallamas, se descubre que es la Cosa
-# Cambiar para que no ocurra intercambio si el objetivo esta en cuarentena
-# Agregar Tests
-# Reorganizar codigo
+#! Tareas por hacer en Back
+'''
+Refactorizar util.py y repository.py
+Refactorizar todo lo relacionado a Positions (Debuggear las cartas de Puerta Atrancada, Cuarentena y Hacha)
+Revisar que la selección de targets cumplan con las reglas (Ver Mensaje Pinneado)
+Mejorar tema de la Victoria
+Implementar Fallaste
+Implementar Cita a Ciegas, Queda entre Nosotros y Opps!
+Hacer Testing
+Mejorar Logica: Si se descubre que la Cosa tiene el lanzallamas, se descubre que es la Cosa 
+                Cambiar para que no ocurra intercambio si el objetivo esta en cuarentena
+Hacer clang formating al codigo
+'''
 
 async def exchange_stage(lobby_name : str, user_start : str, user_finish : str):
     game_repo = GameRepository()
