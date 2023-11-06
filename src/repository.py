@@ -581,6 +581,16 @@ class GameRepository:
     def get_defend_or_exchange(self, game_name: str) -> str:
         game = self.get_game(game_name)
         return game.defend_or_exchange
+
+    @db_session
+    def set_is_panic_card(self, game_name: str, boolean: bool):
+        game = self.get_game(game_name)
+        game.is_panic_card = boolean
+
+    @db_session
+    def get_is_panic_card(self, game_name: str) -> bool:
+        game = self.get_game(game_name)
+        return game.is_panic_card
     
 class CardRepository:
 

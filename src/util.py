@@ -486,10 +486,10 @@ class GameLogic:
                     target_users.append(user["name"])
                 target_users.remove(user_name)
 
-            case "Whisky" | "Vigila tus espaldas":  # El que juega o el flujo de juego
+            case "Whisky" | "Vigila tus espaldas" | "¡Ups!":  # El que juega o el flujo de juego
                 target_users.append(user_name)
 
-            case "Lanzallamas" | "Analisis" | "Sospecha" | "Cuarentena" | "Puerta trancada": # Usuarios adyacentes
+            case "Lanzallamas" | "Analisis" | "Sospecha" | "Cuarentena" | "Puerta trancada" | "Que quede entre nosotros": # Usuarios adyacentes
                 if(not self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)):
                     target_users.append(next_user_name)
                 if(not self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)):

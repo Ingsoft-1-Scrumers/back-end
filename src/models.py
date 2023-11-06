@@ -42,6 +42,7 @@ class Game(db.Entity):
     exchange_card_user_finish = Optional(int, default=0)
     exchange_user_start = Optional(str)
     exchange_user_finish = Optional(str)
+    is_panic_card = Optional(bool, default=False)
 
 class Position(db.Entity):
     user = PrimaryKey(User)

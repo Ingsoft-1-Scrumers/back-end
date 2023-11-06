@@ -87,6 +87,11 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
             await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
             await manager.broadcast_to_lobby_users(lobby_name, f"whisky, {user_turn}, {user_cards}")
 
+        case '¡Ups!':
+            user_cards = user_repo.get_user_cards(user_turn)
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
+            await manager.broadcast_to_lobby_users(lobby_name, f"¡ups!, {user_turn}, {user_cards}")
+
         # Mensaje con una LISTA de ids de cartas del objetivo
         case 'Analisis':
             user_cards = user_repo.get_user_cards(target_user_name)
@@ -97,6 +102,11 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
             game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
             await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
             user_finish = game_logic.next_player(lobby_name, user_turn)
+
+        case 'Que quede entre nosotros':
+            user_cards = user_repo.get_user_cards(user_turn)
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+            await manager.send_message(user_turn, f"que quede entre nosotros, {target_user_name}, {user_cards}")
 
         case _:
             game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
@@ -151,8 +161,20 @@ async def game_flow(lobby_name : str):
                 await manager.send_message(user_turn, f"steal_card_stage")
 
         case 'steal_card_stage':
-            game_repo.set_game_status(lobby_name, "discard_or_play")
-            await manager.send_message(user_turn, f"discard_or_play")
+            if (game_repo.get_is_panic_card(lobby_name)):
+                game_repo.set_is_panic_card(lobby_name, False)
+                game_repo.set_game_status(lobby_name, f"play_panic")
+                await manager.send_message(user_turn, f"play_panic")
+            else:
+                game_repo.set_game_status(lobby_name, "discard_or_play")
+                await manager.send_message(user_turn, f"discard_or_play")
+
+        case 'play_panic':
+            target_user_name = game_repo.get_target_to_be_afflicted(lobby_name)
+            effect_to_be_applied = game_repo.get_effect_to_be_applied(lobby_name)
+            #defense = game_logic.can_user_defend_play(target_user_name, effect_to_be_applied)
+            #Suponemos que no se puede defender de una carta de panico
+            await applied_effect(lobby_name, target_user_name, effect_to_be_applied)
 
         case 'discard_or_play':
             choice = game_repo.get_discard_or_play(lobby_name)
@@ -614,7 +636,9 @@ async def steal_card(request: LobbyBase):
     
     try:
         if (game_repo.get_game_status(lobby_name) == 'steal_card_stage'):
-            card_dict = game_logic.steal_card_from_deck(user_name) 
+            card_dict = game_logic.steal_card_from_deck(user_name)
+            if (card_dict.type == "Panico"):
+                game_repo.set_is_panic_card(lobby_name, True)
         else:   
             card_dict = game_logic.steal_card_from_deck_no_panic(user_name)
         
