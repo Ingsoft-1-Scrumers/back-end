@@ -107,6 +107,12 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
             user_cards = user_repo.get_user_cards(user_turn)
             await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
             await manager.send_message(user_turn, f"que quede entre nosotros, {target_user_name}, {user_cards}")
+        
+        case 'Cita a ciegas':
+            game_repo.set_is_panic_card(lobby_name, True)
+            game_repo.set_game_status(lobby_name, "steal_card_stage")
+            await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+            await manager.send_message(user_turn, f"steal_card_stage")
 
         case _:
             game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
@@ -115,7 +121,8 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
     
     game_repo.set_effect_to_be_applied(lobby_name, "None")
     game_repo.set_target_to_be_afflicted(lobby_name, "None")
-    victory = game_logic.victory(lobby_name) 
+    victory = game_logic.victory(lobby_name)
+    cita_a_ciegas = game_repo.get_is_panic_card(lobby_name)
     
     if (victory):
         list_winners = game_logic.list_winners(lobby_name)
@@ -123,6 +130,8 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
         await manager.broadcast_to_lobby_users(lobby_name, f"winners, {list_winners}")
         await manager.remove_all_user_from_lobby(lobby_name)
         game_logic.end_game(lobby_name)
+    elif (not cita_a_ciegas):
+        game_repo.set_is_panic_card(lobby_name, False)
     else:
         await exchange_stage(lobby_name, user_turn, user_finish)
 
@@ -635,12 +644,16 @@ async def steal_card(request: LobbyBase):
         raise HTTPException(status_code=406, detail='This game has not started yet')
     
     try:
-        if (game_repo.get_game_status(lobby_name) == 'steal_card_stage'):
+        if not (game_repo.get_is_panic_card(lobby_name)):
             card_dict = game_logic.steal_card_from_deck(user_name)
             if (card_dict.type == "Panico"):
                 game_repo.set_is_panic_card(lobby_name, True)
-        else:   
+        #caso: "cita a ciegas"
+        #no debe intercambiar, entonces finaliza el turno
+        else:
             card_dict = game_logic.steal_card_from_deck_no_panic(user_name)
+            game_repo.set_game_status(lobby_name, "finish_exchange")
+            await manager.send_message(user_name, f"discard")
         
         if (user_repo.is_user_in_quarantine(user_name)):
             await manager.broadcast_to_lobby_users(lobby_name, f"steal_card, {user_name}, {card_dict['name']}")

@@ -486,7 +486,7 @@ class GameLogic:
                     target_users.append(user["name"])
                 target_users.remove(user_name)
 
-            case "Whisky" | "Vigila tus espaldas" | "¡Ups!":  # El que juega o el flujo de juego
+            case "Whisky" | "Vigila tus espaldas" | "¡Ups!" | "Cita a ciegas":  # El que juega o el flujo de juego
                 target_users.append(user_name)
 
             case "Lanzallamas" | "Analisis" | "Sospecha" | "Cuarentena" | "Puerta trancada" | "Que quede entre nosotros": # Usuarios adyacentes
