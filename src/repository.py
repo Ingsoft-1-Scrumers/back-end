@@ -455,7 +455,9 @@ class GameRepository:
     @db_session
     def get_users_position(self, game_name: str) -> [dict]:
         positions = self.get_all_positions(game_name)
-        users_dict = [{'name': position.user.name, 'position': position.number} for position in positions]
+        users_dict = [{'name': position.user.name, 
+                       'position': position.number, 
+                       'left_door': position.left_door} for position in positions]
         users_dict = sorted(users_dict, key=lambda x: x.get('position', ''))
         return users_dict
     
@@ -619,6 +621,11 @@ class CardRepository:
     def get_card_name(self, card_id: int) -> str:
         card = self.get_card(card_id)
         return card.name
+    
+    @db_session
+    def is_panic_card(self, card_id: int) -> bool:
+        card = self.get_card(card_id)
+        return card.type == "Panico"
 
 class PositionRepository:
 

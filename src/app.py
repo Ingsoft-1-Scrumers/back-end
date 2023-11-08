@@ -736,6 +736,9 @@ async def play_card(request: PlayCardBase):
     
     if not (user_repo.is_user_turn(lobby_name, user_name)):
         raise HTTPException(status_code=401, detail='It is not your turn')
+    
+    if ((not card_repo.is_panic_card(card_id)) and game_repo.get_game_status == "play_panic"):
+        raise HTTPException(status_code=401, detail='You must play the panic card')
 
     try:
         game_logic.discard_card(user_name, card_id)

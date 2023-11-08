@@ -24,7 +24,6 @@ def lanzallamas(game_name: str, user_name: str, target_user_name: str):
     if (position_repo.get_right_door(pos_target)):
         position_repo.set_right_door(pos_target, False)
         position_repo.set_right_door(pos_previus_player, True)
-    #import ipdb; ipdb.set_trace()
     if (position_repo.get_left_door(pos_target)):
         position_repo.set_left_door(pos_target, False)
         position_repo.set_left_door(pos_next_player, True)
@@ -54,6 +53,7 @@ def hacha(game_name: str, user_name: str, target_user_name: str):
     if(user_name == target_user_name):
         user_repo.set_user_in_quarantine_false(target_user_name)
     else:
+        #sacamos la puerta atrancada entre el user y el target
         if(game_logic.is_there_obstacle_between_players(game_name, user_name, target_user_name)):
             pos_user_numb = position_repo.get_numb_position(user_name)
             pos_target_numb = position_repo.get_numb_position(target_user_name)
@@ -68,6 +68,9 @@ def hacha(game_name: str, user_name: str, target_user_name: str):
             else:
                 position_repo.set_left_door(pos_target, False)
                 position_repo.set_right_door(pos_user, False)
+        #sacamos la cuarentena del adyacente
+        elif(user_repo.is_user_in_quarantine(target_user_name)):
+            user_repo.set_user_in_quarantine_false(target_user_name)
 
 @db_session
 def determinacion(game_name: str, user_name: str, target_user_name: str):
@@ -395,6 +398,7 @@ class GameLogic:
     
         return exchange_with_superinfection
     
+    #el nombre creo q sería right_player, ya que es un número mas
     @db_session
     def left_player(self, game_name: str, user_name: str) -> str:
         initial_amount_players = self.game_repo.get_initial_amount(game_name)
@@ -410,6 +414,7 @@ class GameLogic:
 
         return left_position.user.name
 
+    #el nombre creo q sería left_player, ya que es un número menos
     @db_session
     def right_player(self, game_name: str, user_name: str) -> str:
         initial_amount_players = self.game_repo.get_initial_amount(game_name)
@@ -436,9 +441,9 @@ class GameLogic:
     def previous_player(self, game_name :str, user_name :str) -> str:
         direction = self.game_repo.get_direction(game_name)
 
-        if (direction): # Izquierda
-            previous_player = self.right_player(game_name, user_name)
-        else: # Derecha
+        if (direction): #sentido horario, el previous es la izquierda
+            previous_player = self.right_player(game_name, user_name) 
+        else: #sentido antihorario, el previous es la derecha
             previous_player = self.left_player(game_name, user_name)
             
         return previous_player
@@ -447,9 +452,9 @@ class GameLogic:
     def next_player(self, game_name :str, user_name :str) -> str:
         direction = self.game_repo.get_direction(game_name)
 
-        if (direction): # Izquierda
+        if (direction): #sentido horario, el next es la derecha
             next_player = self.left_player(game_name, user_name)
-        else: # Derecha
+        else: #sentido antihorario, el next es la izquierda
             next_player = self.right_player(game_name, user_name)
         
         return next_player
@@ -472,14 +477,23 @@ class GameLogic:
                 if(self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)):
                     target_users.append(previous_user_name)
                     
+                #si mis adyacentes están en cuarentena, puedo jugarles esta carta
+                if(self.user_repo.is_user_in_quarantine(next_user_name)):
+                    target_users.append(next_user_name)
+                if(self.user_repo.is_user_in_quarantine(previous_user_name)):
+                    target_users.append(previous_user_name)
+                    
             case "Determinacion": #no tiene efecto en esta sprint, pero pongo un user para q sea jugable
                 target_users.append(user_name)
 
-            case "Mas vale que corras": #no puede con los que están en cuarentena
-                for user in all_players:
-                    if(not self.user_repo.is_user_in_quarantine((user["name"]))):
-                        target_users.append(user["name"])
-                target_users.remove(user_name)
+            case "Mas vale que corras": 
+                #no puede jugar la carta si estoy en cuarentena
+                if(not self.user_repo.is_user_in_quarantine(user_name)):
+                    for user in all_players:
+                        #no puede con los que están en cuarentena
+                        if(not self.user_repo.is_user_in_quarantine((user["name"]))):
+                            target_users.append(user["name"])
+                    target_users.remove(user_name)
 
             case "Seduccion": # Todos menos el que la juega
                 for user in all_players:
@@ -488,20 +502,30 @@ class GameLogic:
 
             case "Whisky" | "Vigila tus espaldas" | "¡Ups!" | "Cita a ciegas":  # El que juega o el flujo de juego
                 target_users.append(user_name)
+            
+            case "Lanzallamas":
+                #no puedo jugar si estoy en cuarentena
+                if(not self.user_repo.is_user_in_quarantine(user_name)):
+                    if(not self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)):
+                        target_users.append(next_user_name)
+                    if(not self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)):
+                        target_users.append(previous_user_name)
 
-            case "Lanzallamas" | "Analisis" | "Sospecha" | "Cuarentena" | "Puerta trancada" | "Que quede entre nosotros": # Usuarios adyacentes
+            case "Analisis" | "Sospecha" | "Cuarentena" | "Puerta trancada" | "Que quede entre nosotros": # Usuarios adyacentes
                 if(not self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)):
                     target_users.append(next_user_name)
                 if(not self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)):
                     target_users.append(previous_user_name)
                     
             case "Cambio de lugar":
-                if(not (self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)
-                   or self.user_repo.is_user_in_quarantine(next_user_name))):
-                    target_users.append(next_user_name)
-                if(not (self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)
-                        or self.user_repo.is_user_in_quarantine(previous_user_name))):
-                    target_users.append(previous_user_name)
+                #no puedo jugar esta carta si estoy en cuarentena
+                if(not self.user_repo.is_user_in_quarantine(user_name)):
+                    if(not (self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)
+                    or self.user_repo.is_user_in_quarantine(next_user_name))):
+                        target_users.append(next_user_name)
+                    if(not (self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)
+                            or self.user_repo.is_user_in_quarantine(previous_user_name))):
+                        target_users.append(previous_user_name)
             
         return target_users
         
