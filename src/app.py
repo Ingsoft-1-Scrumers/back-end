@@ -29,12 +29,15 @@ Hacer clang formating al codigo
 '''
 
 async def exchange_stage(lobby_name : str, user_start : str, user_finish : str):
+    user_repo = UserRepository()
     game_repo = GameRepository()
     game_logic = GameLogic()
     superinfection = game_logic.exchange_with_superinfection(user_start, user_finish)
     obstacle = game_logic.is_there_obstacle(lobby_name, user_start)
 
     if (obstacle): # Hay obstaculo
+        await end_turn(lobby_name)
+    if(user_repo.is_user_in_quarantine(user_start)): #si estás en cuarentena no podes iniciar un intercambio
         await end_turn(lobby_name)
     elif (superinfection): # Hay superinfeccion
         if (game_logic.superinfection(user_start)):
