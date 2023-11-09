@@ -407,7 +407,7 @@ class GameLogic:
         self.lobby_repo.remove_lobby(lobby_name)
 
     @db_session
-    def update_doors_after_swap_positionupdate_actual_doors(user_name1, user_name2):
+    def update_doors_after_swap_position(user_name1, user_name2):
         position_repo = PositionRepository()
         pos_user_1 = position_repo.get_position_user_name(user_name1)
         pos_user_2 = position_repo.get_position_user_name(user_name2)
@@ -473,7 +473,7 @@ class GameLogic:
         direction = self.game_repo.get_direction(game_name)
 
         if (direction): #sentido horario, el previous es la izquierda
-            previous_player = self.closest_clockwise_player(game_name, user_name) 
+            previous_player = self.closest_anticlockwise_player(game_name, user_name) 
         else: #sentido antihorario, el previous es la derecha
             previous_player = self.closest_clockwise_player(game_name, user_name)
             
@@ -486,7 +486,7 @@ class GameLogic:
         if (direction): #sentido horario, el next es la derecha
             next_player = self.closest_clockwise_player(game_name, user_name)
         else: #sentido antihorario, el next es la izquierda
-            next_player = self.closest_clockwise_player(game_name, user_name)
+            next_player = self.closest_anticlockwise_player(game_name, user_name)
         
         return next_player
 
