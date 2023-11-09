@@ -534,7 +534,8 @@ async def ready(request: LobbyBase):
 
     try:
         user_repo.set_user_ready(user_name, True)
-        await game_flow(lobby_name)
+        if ENVIRONMENT == 'production':
+            await game_flow(lobby_name)
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while setting the user as ready')
@@ -668,14 +669,16 @@ async def discard_card(request: CardBase):
     try:
         game_logic.discard_card(user_name, id_card)
 
-        if (user_repo.is_user_in_quarantine(user_name)):
-            card_dict = card_repo.get_card_dict(id_card)
-            await manager.broadcast_to_lobby_users(lobby_name, f"discard_card, {user_name}, {card_dict['name']}")
-        else:
-            await manager.broadcast_to_lobby_users(lobby_name, f"discard_card, {user_name}")
+        if ENVIRONMENT == 'production':
+            if (user_repo.is_user_in_quarantine(user_name)):
+                card_dict = card_repo.get_card_dict(id_card)
+                await manager.broadcast_to_lobby_users(lobby_name, f"discard_card, {user_name}, {card_dict['name']}")
+            else:
+                await manager.broadcast_to_lobby_users(lobby_name, f"discard_card, {user_name}")
 
-        game_repo.set_discard_or_play(lobby_name, "discard")
-        await game_flow(lobby_name)
+            game_repo.set_discard_or_play(lobby_name, "discard")
+            await game_flow(lobby_name)
+            
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while discarding the card')
