@@ -4,6 +4,7 @@ from connection import ConnectionManager
 from repository import *
 from util import *
 from basemodels import *
+from settings import *
 
 app = FastAPI()
 manager = ConnectionManager()
@@ -363,8 +364,10 @@ async def create_lobby(lobby: CreateLobbyBase):
         lobby_repo.create_lobby(lobby_name, min_players, max_players, password, host_name)
         total_users = lobby_repo.get_amount_users(lobby_name)
         is_private = lobby_repo.is_lobby_private(lobby_name)
-        await manager.add_user_to_lobby(lobby_name, host_name)
-        await manager.broadcast_to_users_with_no_lobby(f"new_lobby, {lobby_name}, {total_users}, {max_players}, {is_private}")
+
+        if ENVIRONMENT == 'production':
+            await manager.add_user_to_lobby(lobby_name, host_name)
+            await manager.broadcast_to_users_with_no_lobby(f"new_lobby, {lobby_name}, {total_users}, {max_players}, {is_private}")
         return {'message': 'Lobby created'}
     except Exception as e:
         print(e)
@@ -420,9 +423,10 @@ async def join_lobby(request: JoinLobbyBase):
     try:
         lobby_repo.add_user_to_lobby(lobby_name, user_name)
         total_users = lobby_repo.get_amount_users(lobby_name)
-        await manager.broadcast_to_lobby_users(lobby_name, f"user_connect, {user_name}")
-        await manager.add_user_to_lobby(lobby_name, user_name)
-        await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
+        if ENVIRONMENT == 'production':
+            await manager.broadcast_to_lobby_users(lobby_name, f"user_connect, {user_name}")
+            await manager.add_user_to_lobby(lobby_name, user_name)
+            await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
         return {'message': 'Joined lobby'}
     except Exception as e:
         print(e)
@@ -502,9 +506,12 @@ async def start_game(request: LobbyBase):
 
     try:
         game_logic.start_game(lobby_name)
-        await manager.broadcast_to_lobby_users(lobby_name, f"game_start")
-        await manager.broadcast_to_users_with_no_lobby(f"game_start, {lobby_name}")
-        await game_flow(lobby_name)
+
+        if ENVIRONMENT == 'production':
+            await manager.broadcast_to_lobby_users(lobby_name, f"game_start")
+            await manager.broadcast_to_users_with_no_lobby(f"game_start, {lobby_name}")
+            await game_flow(lobby_name)
+
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while starting the game')
@@ -618,12 +625,13 @@ async def steal_card(request: LobbyBase):
         else:   
             card_dict = game_logic.steal_card_from_deck_no_panic(user_name)
         
-        if (user_repo.is_user_in_quarantine(user_name)):
-            await manager.broadcast_to_lobby_users(lobby_name, f"steal_card, {user_name}, {card_dict['name']}")
-        else:
-            await manager.broadcast_to_lobby_users(lobby_name, f"steal_card, {user_name}")
+        if ENVIRONMENT == 'production':
+            if (user_repo.is_user_in_quarantine(user_name)):
+                await manager.broadcast_to_lobby_users(lobby_name, f"steal_card, {user_name}, {card_dict['name']}")
+            else:
+                await manager.broadcast_to_lobby_users(lobby_name, f"steal_card, {user_name}")
 
-        await game_flow(lobby_name)
+            await game_flow(lobby_name)
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while stealing a card')

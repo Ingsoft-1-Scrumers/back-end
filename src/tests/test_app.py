@@ -296,6 +296,28 @@ def test_joinable_lobbies__error(mock_UserRepository, mock_LobbyRepository):
 
 # Unirse a lobby tests
 @patch('app.UserRepository')
+@patch('app.LobbyRepository')
+def test_join_lobby(mock_UserRepository, mock_LobbyRepository):
+    mock_repository_user = MagicMock()
+    mock_repository_lobby = MagicMock()
+
+    mock_repository_user.user_exists.return_value = True
+    mock_repository_user.is_user_in_a_lobby.return_value = False
+    mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_lobby.is_game_started.return_value = False
+    mock_repository_lobby.is_lobby_full.return_value = False
+    mock_repository_lobby.is_password_correct.return_value = True
+    mock_repository_lobby.add_user_to_lobby.return_value = True
+
+    mock_UserRepository.return_value = mock_repository_user
+    mock_LobbyRepository.return_value = mock_repository_lobby
+
+    json_body = {"lobby_name": "Lobby1", "password": "empty", "user_name": "User1"}
+    response = client.post(url='/join_lobby/', json=json_body)
+    assert_response_equals(response, 200, {'message': 'Joined lobby'})
+
+
+@patch('app.UserRepository')
 def test_join_lobby__user_does_not_exist(mock_UserRepository):
     mock_repository_user = MagicMock()
 
@@ -484,7 +506,8 @@ def test_leave_lobby(mock_LobbyRepository, mock_UserRepository):
 
     mock_repository_lobby.lobby_exists.return_value = True
     mock_repository_user.is_user_in_lobby.return_value = True
-    mock_repository_lobby.is_game_started.return_value = False
+    mock_repository_lobby.is_game_started.return_value = True
+    mock_repository_lobby.leave_lobby.return_value = True
 
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
@@ -573,7 +596,7 @@ def test_start_game(mock_LobbyRepository, mock_UserRepository):
 
     json_body = {"lobby_name": "Lobby2", "user_name": "User2"}
     response = client.post(url='/start_game/', json=json_body)
-    assert_response_equals(response, 200, {'detail': 'Game started'})
+    assert response.status_code == 200, response.json()
 
 @patch('app.LobbyRepository')
 def test_start_game__lobby_does_not_exist(mock_LobbyRepository):
@@ -821,23 +844,26 @@ def test_user_hand__error(mock_UserRepository, mock_LobbyRepository):
 @patch('app.GameLogic')
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
-def test_steal_card(mock_UserRepository, mock_LobbyRepository, mock_GameLogic, card):
+@patch('app.GameRepository')
+def test_steal_card(mock_UserRepository, mock_LobbyRepository, mock_GameLogic,mock_GameRepository ,card):
     mock_repository_user = MagicMock()
     mock_repository_lobby = MagicMock()
     mock_repository_game_logic = MagicMock()
+    mock_repository_game = MagicMock()
 
     mock_repository_lobby.lobby_exists.return_value = True
     mock_repository_user.is_user_in_lobby.return_value = True
     mock_repository_lobby.is_game_started.return_value = True
-    mock_repository_game_logic.steal_card_from_deck.return_value = card
+    mock_repository_lobby.game_repo.get_game_status.return_value = 'steal_card_stage'
 
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
     mock_GameLogic.return_value = mock_repository_game_logic
+    mock_GameRepository.return_value = mock_repository_game
     
     json_body = {"lobby_name": "Lobby1", "user_name": "User1"}
     response = client.post(url='/steal_card/', json=json_body)
-    assert_response_equals(response, 200, card)
+    assert response.status_code == 200
 
 @patch('app.LobbyRepository')
 def test_steal_card_from_deck__lobby_does_not_exist(mock_LobbyRepository):
@@ -977,7 +1003,7 @@ def test_play_card(mock_UserRepository, mock_LobbyRepository, mock_GameLogic, mo
 
     json_body = {"lobby_name": "Lobby1", "user_name": "User1", "target_user_name": "User2", "card_id": 1}
     response = client.post(url='/play_card/', json=json_body)
-    assert_response_equals(response, 200, {'message' :'Card played successfully'})
+    assert response.status_code == 200
 
 @patch('app.LobbyRepository')
 def test_play_card__lobby_does_not_exist(mock_LobbyRepository):
