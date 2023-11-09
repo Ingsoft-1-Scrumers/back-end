@@ -18,14 +18,13 @@ app.add_middleware(
 
 #! Tareas por hacer en Back
 '''
-Refactorizar util.py y repository.py
-Refactorizar todo lo relacionado a Positions (Debuggear las cartas de Puerta Atrancada, Cuarentena y Hacha)
+Debuggear las cartas de Puerta Atrancada, Cuarentena y Hacha
 Revisar que la selección de targets cumplan con las reglas (Ver Mensaje Pinneado)
 Mejorar tema de la Victoria
 Implementar Fallaste
 Implementar Cita a Ciegas, Queda entre Nosotros y Opps!
 Hacer Testing
-Mejorar Logica: Si se descubre que la Cosa tiene el lanzallamas, se descubre que es la Cosa 
+Mejorar Logica: Si se descubre que la Cosa tiene el lanzallamas, se muere la Cosa 
                 Cambiar para que no ocurra intercambio si el objetivo esta en cuarentena
 Hacer clang formating al codigo
 '''
@@ -261,19 +260,27 @@ async def game_flow(lobby_name : str):
             user_finish = game_repo.get_exchange_user_finish(lobby_name)
             card_start = game_repo.get_exchange_card_user_start(lobby_name)
 
+            game_repo.set_game_status(lobby_name, "steal_after_exchange")
+            game_repo.set_effect_to_be_applied(lobby_name, "None")
+            game_repo.clean_exchange_data(lobby_name)
+
             match effect_to_be_applied:
                 case 'Aterrador':
                     card_start_name = card_repo.get_card_name(card_start)
                     await manager.send_message(user_finish, f"aterrador, {user_start}, {card_start_name}")
-                case 'Fallaste': #! Sprint 3
-                    pass
-            
-            game_repo.clean_exchange_data(lobby_name)
-            game_repo.set_effect_to_be_applied(lobby_name, "None")
-            game_repo.set_game_status(lobby_name, "steal_after_exchange")
-
+                case 'Fallaste': 
+                    next_next_user = game_logic.next_player(lobby_name, user_finish)
+                    if not (next_next_user == user_turn):
+                        game_repo.set_game_status(lobby_name, "steal_after_fallaste")
+                        game_repo.set_exchange_user_finish(lobby_name, next_next_user)
+                    
             await manager.broadcast_to_lobby_users(lobby_name, f"defense_play, {user_finish}")
             await manager.send_message(user_finish, f"steal_after_exchange")
+
+        case 'steal_after_fallaste':
+            user_finish = game_repo.get_exchange_user_finish(lobby_name)
+            game_repo.clean_exchange_data(lobby_name)
+            await exchange_stage(lobby_name, user_turn, user_finish)
 
         case 'steal_after_exchange':
             await end_turn(lobby_name)
