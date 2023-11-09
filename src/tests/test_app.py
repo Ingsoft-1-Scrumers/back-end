@@ -62,6 +62,10 @@ def card():
 def combinations():
     pass
 
+@pytest.fixture
+def role():
+    return "Infectado"
+
 def assert_response_equals(response, expected_status_code, expected_json):
     assert response.status_code == expected_status_code, f"Expected status code {expected_status_code}, but got {response.status_code}."
     assert response.json() == expected_json, f"Expected JSON {expected_json}, but got {response.json()}."
@@ -1087,6 +1091,27 @@ def test_play_card__error(mock_UserRepository, mock_LobbyRepository, mock_GameLo
     json_body = {"lobby_name": "Lobby1", "user_name": "User1", "target_user_name": "User2", "card_id": 1}
     response = client.post(url='/play_card/', json=json_body)
     assert_response_equals(response, 500, {'detail':'An error occurred while playing the card'})
+
+@patch('app.GameRepository')
+@patch('app.LobbyRepository')
+@patch('app.UserRepository')
+def test_get_user_role(mock_UserRepository, mock_LobbyRepository, mock_GameRepository):
+    mock_repository_user = MagicMock()
+    mock_repository_lobby = MagicMock()
+    mock_repository_game = MagicMock()
+
+    mock_repository_user.user_exists.return_value = True
+    mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_user.is_user_in_lobby = True
+    mock_repository_lobby.is_game_started = True
+    mock_repository_user.get_role.return_value = role
+
+    mock_UserRepository.return_value = mock_repository_user
+    mock_LobbyRepository.return_value = mock_repository_lobby
+    mock_GameRepository.return_value = mock_repository_game
+
+    response = client.get(url='/get_user_role/Lobby1/User1')
+    assert_response_equals(response, 200, {'role': role})
 
 '''
 # Finalizar juego tests
