@@ -679,3 +679,10 @@ class GameLogic:
         else:
             winners = "la Cosa y los infectados"
         return winners
+    
+    @db_session
+    def flamethrower_lose_condition(self, user_name : str) -> bool:
+        user_repo = UserRepository()
+        
+        death_condition = user_repo.get_role(user_name) == "Cosa" and self.is_card_in_hand(user_name, "Lanzallamas")
+        return death_condition
