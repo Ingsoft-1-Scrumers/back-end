@@ -219,6 +219,11 @@ async def game_flow(lobby_name : str):
                         game_logic.end_game(lobby_name)
                     else:
                         await exchange_stage(lobby_name, user_turn, user_finish)
+                    
+                case 'Cuerdas podridas':
+                    game_logic.delete_all_quarantine(lobby_name)
+                    await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
+                    await exchange_stage(lobby_name, user_turn, user_finish)
                 
                 case _: #por el momento, para q se usen las otras cartas de pánico
                     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")

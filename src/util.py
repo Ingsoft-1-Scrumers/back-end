@@ -360,6 +360,8 @@ class GameLogic:
             num_infect = len(user.hand.select(lambda card : card.name == "Infectado"))
             if (user.role == "Infectado" and num_infect == 1):
                 valid_result = False
+        elif(card_to_discard.type == "Panico"):
+            valid_result = False
        
         return valid_result
 
@@ -695,3 +697,12 @@ class GameLogic:
         
         death_condition = user_repo.get_role(user_name) == "Cosa" and self.is_card_in_hand(user_name, "Lanzallamas")
         return death_condition
+    
+    @db_session
+    def delete_all_quarantine(self, lobby_name: str):
+        user_repo = UserRepository()
+        lobby_repo = LobbyRepository()
+        all_players = lobby_repo.get_lobby_users_no_host(lobby_name)
+        for user in all_players:
+            user_repo.set_user_in_quarantine_false(user["name"])
+        
