@@ -61,7 +61,7 @@ def card():
 #combinations es un diccionario con los objetivos de cada carta
 @pytest.fixture
 def combinations():
-    [
+    return [
     {"card_id": 1,
     "valid": ["user2", "user3"],
     "discard": True},
@@ -874,13 +874,15 @@ def test_get_play_combinations(mock_UserRepository, mock_LobbyRepository, mock_G
     mock_repository_user.is_user_in_lobby.return_value = True
     mock_repository_lobby.is_game_started.return_value = True
     mock_repository_game_logic.get_play_combinations.return_value = combinations
+    #mock_repository_game_logic.get_play_combinations.assert_called_once_with("User1", "Lobby1")
 
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
     mock_GameLogic.return_value = mock_repository_game_logic
 
-    response = client.get(url='/get_play_combinations/Lobby1/User1')
-    assert_response_equals(response, 200, combinations)
+    response = client.get(url='/user_cards_info/Lobby1/User1')
+    assert response.status_code == 200, response.json()
+    assert response.json() == combinations, response.json()
 
 # Robar carta tests
 @patch('app.GameLogic')
