@@ -585,7 +585,7 @@ async def get_user_hand(lobby_name: str, user_name: str):
 async def get_play_combinations(lobby_name: str, user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
-    game_logic = GameLogic()  
+    game_logic = GameLogic()
     
     if not (lobby_repo.lobby_exists(lobby_name)):
         raise HTTPException(status_code=404, detail='This lobby name does not exist')
