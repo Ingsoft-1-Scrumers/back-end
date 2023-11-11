@@ -370,7 +370,7 @@ class GameLogic:
         self.lobby_repo.remove_lobby(lobby_name)
 
     @db_session
-    def update_doors_after_swap_position(user_name1, user_name2):
+    def update_doors_after_swap_position(self, user_name1, user_name2):
         position_repo = PositionRepository()
         pos_user_1 = position_repo.get_position_user_name(user_name1)
         pos_user_2 = position_repo.get_position_user_name(user_name2)
