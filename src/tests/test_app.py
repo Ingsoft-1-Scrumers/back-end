@@ -1221,3 +1221,27 @@ def test_defend_or_exchange(mock_UserRepository, mock_LobbyRepository, mock_Game
     response = client.post(url='/defend_or_exchange/', json=json_body)
 
     assert response.status_code == 200
+
+@patch('app.LobbyRepository')
+@patch('app.UserRepository')
+@patch('app.GameLogic')
+def test_defense_card(mock_GameLogic, mock_UserRepository, mock_LobbyRepository):
+    mock_repository_user = MagicMock()
+    mock_repository_lobby = MagicMock()
+    mock_repository_gamelogic = MagicMock()
+
+    mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_lobby.is_game_started.return_value = True
+    mock_repository_user.is_user_in_lobby.return_value = True
+    mock_repository_user.check_user_has_card.return_value = True
+    mock_repository_gamelogic.can_card_cancel_effect.return_value = True
+
+    mock_UserRepository.return_value = mock_repository_user
+    mock_LobbyRepository.return_value = mock_repository_lobby
+    mock_GameLogic.return_value = mock_repository_gamelogic
+
+    json_body = {"lobby_name": "Lobby1", "user_name": "User1", "card_id": 55}
+    response = client.post(url='/defense_card/', json=json_body)
+
+    assert response.status_code == 200
+
