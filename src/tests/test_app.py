@@ -1222,26 +1222,76 @@ def test_defend_or_exchange(mock_UserRepository, mock_LobbyRepository, mock_Game
 
     assert response.status_code == 200
 
-@patch('app.LobbyRepository')
 @patch('app.UserRepository')
+@patch('app.LobbyRepository')
 @patch('app.GameLogic')
-def test_defense_card(mock_GameLogic, mock_UserRepository, mock_LobbyRepository):
+@patch('app.CardRepository')
+@patch('app.GameRepository')
+def test_defense_card(mock_GameLogic, mock_UserRepository, mock_LobbyRepository, mock_CardRepository, mock_GameRepository):
     mock_repository_user = MagicMock()
     mock_repository_lobby = MagicMock()
     mock_repository_gamelogic = MagicMock()
+    mock_repository_card = MagicMock()
+    mock_repository_game = MagicMock()
 
+    mock_repository_card.get_card_name.return_value = True
     mock_repository_lobby.lobby_exists.return_value = True
     mock_repository_lobby.is_game_started.return_value = True
     mock_repository_user.is_user_in_lobby.return_value = True
     mock_repository_user.check_user_has_card.return_value = True
     mock_repository_gamelogic.can_card_cancel_effect.return_value = True
+    mock_repository_game.set_effect_to_be_applied.return_value = True
+    mock_repository_gamelogic.discard_card.return_value = True
 
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
     mock_GameLogic.return_value = mock_repository_gamelogic
+    mock_CardRepository.return_value = mock_repository_card
+    mock_GameRepository.return_value = mock_repository_game
 
-    json_body = {"lobby_name": "Lobby1", "user_name": "User1", "card_id": 55}
+    json_body = {"lobby_name": "Lobby1", "user_name": "User1", "card_id": 1}
     response = client.post(url='/defense_card/', json=json_body)
 
     assert response.status_code == 200
 
+
+@patch('app.UserRepository')
+@patch('app.LobbyRepository')
+@patch('app.GameLogic')
+@patch('app.CardRepository')
+@patch('app.GameRepository')
+def test_swap_card(mock_GameLogic, mock_UserRepository, mock_LobbyRepository, mock_CardRepository, mock_GameRepository):
+    mock_repository_user = MagicMock()
+    mock_repository_lobby = MagicMock()
+    mock_repository_gamelogic = MagicMock()
+    mock_repository_card = MagicMock()
+    mock_repository_game = MagicMock()
+
+    mock_repository_card.get_card_name.return_value = True
+    mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_lobby.is_game_started.return_value = True
+    mock_repository_user.is_user_in_lobby.return_value = True
+    mock_repository_user.is_target_in_lobby.return_value = True
+    mock_repository_user.check_user_has_card.return_value = True
+    mock_repository_gamelogic.validate_swap_card.return_value = True
+    mock_repository_game.is_there_exchange_offer.return_value = True
+    mock_repository_game.set_exchange_card_finish.return_value = True
+    mock_repository_game.get_exchange_user_start.return_value = True
+    mock_repository_game.get_exchange_user_finish.return_value = True
+    mock_repository_game.get_exchange_card_user_start.return_value = True
+    mock_repository_game.get_exchange_card_user_finish.return_value = True
+    mock_repository_user.is_user_in_quarantine.return_value = True
+    mock_repository_user.is_user_in_quarantine.return_value = True
+    mock_repository_card.get_card_dict.return_value = True
+    mock_repository_game.set_effect_to_be_applied.return_value = True
+
+    mock_UserRepository.return_value = mock_repository_user
+    mock_LobbyRepository.return_value = mock_repository_lobby
+    mock_GameLogic.return_value = mock_repository_gamelogic
+    mock_CardRepository.return_value = mock_repository_card
+    mock_GameRepository.return_value = mock_repository_game
+
+    json_body = {"lobby_name": "Lobby1", "user_name": "User1", "target_user_name": "User2", "card_id": 1}
+    response = client.post(url='/swap_card/', json=json_body)
+
+    assert response.status_code == 200

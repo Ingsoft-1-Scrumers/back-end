@@ -788,6 +788,7 @@ async def defense_card(request: CardBase):
     game_logic = GameLogic()
     game_repo = GameRepository()
     card_repo = CardRepository()
+
     card_name = card_repo.get_card_name(card_id)
     
     if not (lobby_repo.lobby_exists(lobby_name)):
@@ -858,17 +859,18 @@ async def swap_card(request: PlayCardBase):
             card_start = game_repo.get_exchange_card_user_start(lobby_name)
             card_finish = game_repo.get_exchange_card_user_finish(lobby_name)
             
-            if (user_repo.is_user_in_quarantine(user_start)): # Usuario que inicio el intercambio esta en cuarentena
-                card_dict = card_repo.get_card_dict(card_start)
-                await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_start}, {user_finish}, {card_dict['name']}")
-            else: 
-                await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_start}, {user_finish}")
-                
-            if (user_repo.is_user_in_quarantine(user_finish)): # Usuario que acepto el intercambio esta en cuarentena
-                card_dict = card_repo.get_card_dict(card_finish)
-                await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_finish}, {user_start}, {card_dict['name']}")
-            else:
-                await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_finish}, {user_start}")
+            if ENVIRONMENT == 'production':
+                if (user_repo.is_user_in_quarantine(user_start)): # Usuario que inicio el intercambio esta en cuarentena
+                    card_dict = card_repo.get_card_dict(card_start)
+                    await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_start}, {user_finish}, {card_dict['name']}")
+                else: 
+                    await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_start}, {user_finish}")
+                    
+                if (user_repo.is_user_in_quarantine(user_finish)): # Usuario que acepto el intercambio esta en cuarentena
+                    card_dict = card_repo.get_card_dict(card_finish)
+                    await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_finish}, {user_start}, {card_dict['name']}")
+                else:
+                    await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_finish}, {user_start}")
             
         await game_flow(lobby_name)  
     except Exception as e:
