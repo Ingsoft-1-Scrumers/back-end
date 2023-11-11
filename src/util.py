@@ -559,6 +559,10 @@ class GameLogic:
             case "Que quede entre nosotros":
                 target_users.append(next_user_name)
                 target_users.append(previous_user_name)
+                
+            #por el momento para que la otras cartas de pánico se jeuguen, sin efecto
+            case "Revelaciones" | "No podemos ser amigos" | "Vuelta y vuelta" | "Olvidadizo" | "Sal de aqui" | "Es aqui la fiesta" | "Tres, cuatro" | "Uno, dos" | "Cuerdas podridas":
+                target_users.append(user_name)
 
         return target_users
         
