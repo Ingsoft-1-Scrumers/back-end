@@ -22,8 +22,9 @@ Debuggear implementacion con el Front
 Hacer Testing
 En caso de que el Front este bien de tiempo, hacer mas cartas de panico
 Hacer deployment para que se pueda probar
-Mejorar tema de la Victoria
 Hacer clang formating al codigo
+Cartas de panico jodidas: Es aqui la fiesta, Revelaciones y Vuelta Vuelta quedan para el final 
+Mejorar tema de la Victoria
 '''
 
 async def exchange_stage(lobby_name : str, user_start : str, user_finish : str, out_of_order : bool = False):
