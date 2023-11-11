@@ -1178,3 +1178,24 @@ def test_end_game__error(mock_UserRepository, mock_LobbyRepository, mock_GameLog
     response = client.post(url='/end_game/', json=json_body)
     assert_response_equals(response, 500, {'An error occurred while ending the game'})
 '''
+
+@patch('app.GameRepository')
+@patch('app.LobbyRepository')
+@patch('app.UserRepository')
+def test_defend_or_skip(mock_UserRepository, mock_LobbyRepository, mock_GameRepository):
+    mock_repository_user = MagicMock()
+    mock_repository_lobby = MagicMock()
+    mock_repository_game = MagicMock()
+
+    mock_repository_lobby.lobby_exists.return_value = True
+    mock_repository_lobby.is_game_started.return_value = True
+    mock_repository_user.is_user_in_lobby.return_value = True
+
+    mock_UserRepository.return_value = mock_repository_user
+    mock_LobbyRepository.return_value = mock_repository_lobby
+    mock_GameRepository.return_value = mock_repository_game
+
+    json_body = {"lobby_name": "Lobby1", "user_name": "User1", "choice": "defense"}
+    response = client.post(url='/defend_or_skip/', json=json_body)
+
+    assert response.status_code == 200
