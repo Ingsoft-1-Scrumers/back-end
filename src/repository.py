@@ -457,7 +457,8 @@ class GameRepository:
         positions = self.get_all_positions(game_name)
         users_dict = [{'name': position.user.name, 
                        'position': position.number, 
-                       'left_door': position.left_door} for position in positions]
+                       'left_door': position.left_door,
+                       'quarantine': position.user.quarantine} for position in positions]
         users_dict = sorted(users_dict, key=lambda x: x.get('position', ''))
         return users_dict
     
