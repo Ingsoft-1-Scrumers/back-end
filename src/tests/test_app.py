@@ -58,9 +58,23 @@ def card():
   "type": "Contagio"
 }
 
+#combinations es un diccionario con los objetivos de cada carta
 @pytest.fixture
 def combinations():
-    pass
+    [
+    {"card_id": 1,
+    "valid": ["user2", "user3"],
+    "discard": True},
+    {"card_id": 2,
+    "valid": ["user1", "user3"],
+    "discard": False},
+    {"card_id": 3,
+    "valid": ["user1", "user2"],
+    "discard": False},
+    {"card_id": 4,
+    "valid": ["user1", "user2", "user3"],
+    "discard": False},
+    ]
 
 @pytest.fixture
 def role():
@@ -848,9 +862,9 @@ def test_user_hand__error(mock_UserRepository, mock_LobbyRepository):
     assert_response_equals(response, 500, {'detail': 'An error occurred while getting the hand'})
 
 # Obtener objetivos de la carta
-@patch('app.GameLogic')
-@patch('app.LobbyRepository')
 @patch('app.UserRepository')
+@patch('app.LobbyRepository')
+@patch('app.GameLogic')
 def test_get_play_combinations(mock_UserRepository, mock_LobbyRepository, mock_GameLogic, combinations):
     mock_repository_user = MagicMock()
     mock_repository_lobby = MagicMock()
@@ -859,6 +873,7 @@ def test_get_play_combinations(mock_UserRepository, mock_LobbyRepository, mock_G
     mock_repository_lobby.lobby_exists.return_value = True
     mock_repository_user.is_user_in_lobby.return_value = True
     mock_repository_lobby.is_game_started.return_value = True
+    mock_repository_game_logic.get_play_combinations.return_value = combinations
 
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
