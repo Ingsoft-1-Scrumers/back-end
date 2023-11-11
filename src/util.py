@@ -2,43 +2,6 @@ from repository import *
 from settings import CARDS_PER_USER
 from template import ALL_TEMPLATES
 
-    #si soy 5, me da el 6
-@db_session
-def closest_clockwise_player(self, game_name: str, user_name: str) -> str:
-    initial_amount_players = self.game_repo.get_initial_amount(game_name)
-    user_position = self.position_repo.get_position(user_name)
-    user_number = self.position_repo.get_number(user_position)
-    left_position = None
-
-    while left_position == None:
-        left_position = self.game_repo.get_n_position((user_number % initial_amount_players) + 1, game_name)
-
-        if left_position == None:
-            user_number = (user_number % initial_amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
-
-    return left_position.user.name
-
-#el nombre creo q sería left_player, ya que es un número menos
-@db_session
-def closest_anticlockwise_player(self, game_name: str, user_name: str) -> str:
-    initial_amount_players = self.game_repo.get_initial_amount(game_name)
-    user_position = self.position_repo.get_position(user_name)
-    user_number = self.position_repo.get_number(user_position)
-    right_position = None
-
-    while right_position == None:
-        if user_number == 1:
-            right_position = self.game_repo.get_n_position(initial_amount_players, game_name)
-        else:
-            right_position = self.game_repo.get_n_position(user_number-1, game_name)
-
-        if right_position == None:
-            if (user_number > 1):
-                user_number -= 1
-            else:
-                user_number = initial_amount_players
-        
-    return right_position.user.name
 @db_session
 def vigila_tus_espaldas(game_name: str, user_name: str, target_user_name: str):
     game_repo = GameRepository()
@@ -57,13 +20,13 @@ def lanzallamas(game_name: str, user_name: str, target_user_name: str):
     
     # 1 (2) | 3 4 5 -> 1 | 3 4 5 -> el 3 sigue con la puerta a izq, falta puerta der en 1
     if (position_repo.get_right_door(pos_target)):
-        left_player_of_target = closest_anticlockwise_player(game_name, target_user_name)
+        left_player_of_target = game_logic.closest_anticlockwise_player(game_name, target_user_name)
         position_repo.set_right_door(pos_target, False)
         position_repo.set_right_door(left_player_of_target, True)
         
     # 1 2 | (3) 4 5 -> 1 2 | 4 5 -> el 2 sigue con la puerta a der, falta puerta izq en 4
     if (position_repo.get_left_door(pos_target)):
-        right_player_of_target = closest_clockwise_player(game_name, target_user_name)
+        right_player_of_target = game_logic.closest_clockwise_player(game_name, target_user_name)
         position_repo.set_left_door(pos_target, False)
         position_repo.set_left_door(right_player_of_target, True)
 
@@ -466,6 +429,41 @@ class GameLogic:
     
         return exchange_with_superinfection
     
+    @db_session
+    def closest_clockwise_player(self, game_name: str, user_name: str) -> str:
+        initial_amount_players = self.game_repo.get_initial_amount(game_name)
+        user_position = self.position_repo.get_position(user_name)
+        user_number = self.position_repo.get_number(user_position)
+        left_position = None
+
+        while left_position == None:
+            left_position = self.game_repo.get_n_position((user_number % initial_amount_players) + 1, game_name)
+
+            if left_position == None:
+                user_number = (user_number % initial_amount_players) + 1 # Si no hay siguiente, se busca el siguiente del siguiente
+
+        return left_position.user.name
+
+    @db_session
+    def closest_anticlockwise_player(self, game_name: str, user_name: str) -> str:
+        initial_amount_players = self.game_repo.get_initial_amount(game_name)
+        user_position = self.position_repo.get_position(user_name)
+        user_number = self.position_repo.get_number(user_position)
+        right_position = None
+
+        while right_position == None:
+            if user_number == 1:
+                right_position = self.game_repo.get_n_position(initial_amount_players, game_name)
+            else:
+                right_position = self.game_repo.get_n_position(user_number-1, game_name)
+
+            if right_position == None:
+                if (user_number > 1):
+                    user_number -= 1
+                else:
+                    user_number = initial_amount_players
+            
+        return right_position.user.name
 
 
     @db_session
@@ -526,7 +524,9 @@ class GameLogic:
 
             case "Seduccion": # Todos menos el que la juega
                 for user in all_players:
-                    target_users.append(user["name"])
+                    #no puede con los que están en cuarentena
+                    if(not self.user_repo.is_user_in_quarantine((user["name"]))):
+                        target_users.append(user["name"])
                 target_users.remove(user_name)
 
             case "Whisky" | "Vigila tus espaldas" | "¡Ups!" | "Cita a ciegas":  # El que juega o el flujo de juego
@@ -540,7 +540,7 @@ class GameLogic:
                     if(not self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)):
                         target_users.append(previous_user_name)
 
-            case "Analisis" | "Sospecha" | "Cuarentena" | "Puerta trancada" | "Que quede entre nosotros": # Usuarios adyacentes
+            case "Analisis" | "Sospecha" | "Cuarentena" | "Puerta trancada": # Usuarios adyacentes
                 if(not self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)):
                     target_users.append(next_user_name)
                 if(not self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)):
@@ -556,6 +556,10 @@ class GameLogic:
                             or self.user_repo.is_user_in_quarantine(previous_user_name))):
                         target_users.append(previous_user_name)
             
+            case "Que quede entre nosotros":
+                target_users.append(next_user_name)
+                target_users.append(previous_user_name)
+
         return target_users
         
     @db_session
@@ -611,7 +615,7 @@ class GameLogic:
         cancel = False
         match card_effect:
             case "Seduccion" | "swap_card":
-                cancel = (card_name == "Aterrador") or (card_name == "No_gracias")
+                cancel = (card_name == "Aterrador") or (card_name == "No_gracias") or (card_name == "Fallaste")
             case "Cambio de lugar" | "Mas vale que corras":
                 cancel = (card_name == "Aqui estoy bien")
             case "Lanzallamas":
@@ -628,6 +632,7 @@ class GameLogic:
             result = self.position_repo.get_left_door(pos_user)
         return result
 
+    #supone que son adyacentes.
     @db_session
     def is_there_obstacle_between_players(self, lobby_name: str, user_name: str, target_user_name: str) -> bool:
         pos_user_numb = self.position_repo.get_numb_position(user_name)
