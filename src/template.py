@@ -110,7 +110,7 @@ Nada_de_barbacoas = {
 Cuarentena = {
     "card_name" : "Cuarentena",
     "card_type" : "Obstaculo",
-    "quantity_numb_players" : [0, 1, 1, 1, 1, 2, 2, 2, 2]
+    "quantity_numb_players" : [10, 10, 10, 10, 10, 20, 20, 20, 20] #el primero 0
 }
 
 Puerta_trancada = {

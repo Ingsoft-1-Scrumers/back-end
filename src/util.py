@@ -566,7 +566,12 @@ class GameLogic:
                 target_users.append(user_name)
 
             case "Uno, dos":
-                pass
+                previous_previous_user_name = self.previous_player(lobby_name, previous_user_name)
+                next_next_user_name = self.next_player(lobby_name, next_user_name)
+                if (next_next_user_name != user_name):
+                    target_users.append(next_next_user_name)
+                if (previous_previous_user_name != user_name):
+                    target_users.append(previous_previous_user_name)
 
         return target_users
         
@@ -718,7 +723,11 @@ class GameLogic:
             position_repo.set_left_door(pos_user, False)
             position_repo.set_right_door(pos_user, False)
     
-    '''
+    
     @db_session
     def swap_position_party(self, lobby_name: str):
-    '''
+        lobby_repo = LobbyRepository()
+        position_repo = PositionRepository()
+        all_players = lobby_repo.get_lobby_users_no_host(lobby_name)
+        for user in all_players:
+            pass

@@ -251,7 +251,7 @@ async def game_flow(lobby_name : str):
                 case 'Es aqui la fiesta':
                     game_logic.delete_all_doors(lobby_name)
                     game_logic.delete_all_quarantine(lobby_name)
-                    #game_logic.swap_position_party(lobby_name)
+                    game_logic.swap_position_party(lobby_name)
 
                     pass
 
