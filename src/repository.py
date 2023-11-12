@@ -158,7 +158,12 @@ class UserRepository:
         return (user.quarantine > 0)
 
     @db_session
-    def set_user_in_quarantine_true(self, user_name: str):
+    def set_user_in_quarantine_next_player(self, user_name: str):
+        user = self.get_user(user_name)
+        user.quarantine = 3
+
+    @db_session
+    def set_user_in_quarantine_previous_player(self, user_name: str):
         user = self.get_user(user_name)
         user.quarantine = 2
 

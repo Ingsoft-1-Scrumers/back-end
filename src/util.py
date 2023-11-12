@@ -82,8 +82,15 @@ def determinacion(game_name: str, user_name: str, target_user_name: str):
 
 @db_session
 def cuarentena(game_name: str, user_name: str, target_user_name: str):
+    position_repo = PositionRepository()
     user_repo = UserRepository()
-    user_repo.set_user_in_quarantine_true(target_user_name) 
+    pos_user = position_repo.get_numb_position(user_name)
+    pos_target = position_repo.get_numb_position(target_user_name)
+
+    if (pos_user < pos_target):
+        user_repo.set_user_in_quarantine_next_player(target_user_name) 
+    else:
+        user_repo.set_user_in_quarantine_previous_player(target_user_name)
 
 @db_session
 def puerta_atrancada(game_name: str, user_name: str, target_user_name: str):
