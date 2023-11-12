@@ -20,15 +20,17 @@ def lanzallamas(game_name: str, user_name: str, target_user_name: str):
     
     # 1 (2) | 3 4 5 -> 1 | 3 4 5 -> el 3 sigue con la puerta a izq, falta puerta der en 1
     if (position_repo.get_right_door(pos_target)):
-        left_player_of_target = game_logic.closest_anticlockwise_player(game_name, target_user_name)
+        left_player_of_target_name = game_logic.closest_anticlockwise_player(game_name, target_user_name)
+        left_player_of_target_pos = position_repo.get_position(left_player_of_target_name)
         position_repo.set_right_door(pos_target, False)
-        position_repo.set_right_door(left_player_of_target, True)
+        position_repo.set_right_door(left_player_of_target_pos, True)
         
     # 1 2 | (3) 4 5 -> 1 2 | 4 5 -> el 2 sigue con la puerta a der, falta puerta izq en 4
     if (position_repo.get_left_door(pos_target)):
-        right_player_of_target = game_logic.closest_clockwise_player(game_name, target_user_name)
+        right_player_of_target_name = game_logic.closest_clockwise_player(game_name, target_user_name)
+        right_player_of_target_pos = position_repo.get_position(right_player_of_target_name)
         position_repo.set_left_door(pos_target, False)
-        position_repo.set_left_door(right_player_of_target, True)
+        position_repo.set_left_door(right_player_of_target_pos, True)
 
     target_user = user_repo.get_user(target_user_name)
     # Si se quiere eliminar al host, se cambia el mismo
@@ -384,19 +386,19 @@ class GameLogic:
         
         # 1 2 | 3 4 5 -> swap 2 y 5 -> 1 5 | 3 4 2
         if (right_door_1):
-            position_repo.set_right_door(user_name1, False)
-            position_repo.set_right_door(user_name2, True)
+            position_repo.set_right_door(pos_user_1, False)
+            position_repo.set_right_door(pos_user_2, True)
         if (right_door_2):
-            position_repo.set_right_door(user_name2, False)
-            position_repo.set_right_door(user_name1, True)
+            position_repo.set_right_door(pos_user_2, False)
+            position_repo.set_right_door(pos_user_1, True)
             
         # 1 2 | 3 4 5 -> swap 3 y 5 -> 1 2 | 5 4 3
         if (left_door_1):
-            position_repo.set_left_door(user_name1, False)
-            position_repo.set_left_door(user_name2, True)
+            position_repo.set_left_door(pos_user_1, False)
+            position_repo.set_left_door(pos_user_2, True)
         if (left_door_2):
-            position_repo.set_left_door(user_name2, False)
-            position_repo.set_left_door(user_name1, True)
+            position_repo.set_left_door(pos_user_2, False)
+            position_repo.set_left_door(pos_user_1, True)
 
     @db_session
     def swap_positions(self, user_name1: str, user_name2: str):
@@ -511,9 +513,6 @@ class GameLogic:
                 if(self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)
                    or self.user_repo.is_user_in_quarantine(previous_user_name)):
                     target_users.append(previous_user_name)
-                    
-            case "Determinacion": #no tiene efecto en esta sprint, pero pongo un user para q sea jugable
-                target_users.append(user_name)
 
             case "Mas vale que corras": 
                 #no puede jugar la carta si estoy en cuarentena
@@ -524,7 +523,7 @@ class GameLogic:
                             target_users.append(user["name"])
                     target_users.remove(user_name)
 
-            case "Seduccion": # Todos menos el que la juega
+            case "Seduccion" | "No podemos ser amigos" | "Sal de aqui": # Todos menos el que la juega
                 for user in all_players:
                     #no puede con los que están en cuarentena
                     if(not self.user_repo.is_user_in_quarantine((user["name"]))):
@@ -562,8 +561,8 @@ class GameLogic:
                 target_users.append(next_user_name)
                 target_users.append(previous_user_name)
                 
-            #por el momento para que la otras cartas de pánico se jeuguen, sin efecto
-            case "Revelaciones" | "No podemos ser amigos" | "Vuelta y vuelta" | "Olvidadizo" | "Sal de aqui" | "Es aqui la fiesta" | "Tres, cuatro" | "Uno, dos" | "Cuerdas podridas":
+            #por el momento para que la otras cartas de pánico se jueguen, sin efecto
+            case "Determinacion" | "Revelaciones" | "Vuelta y vuelta" | "Olvidadizo" | "Es aqui la fiesta" | "Tres, cuatro" | "Uno, dos" | "Cuerdas podridas":
                 target_users.append(user_name)
 
         return target_users
@@ -705,4 +704,13 @@ class GameLogic:
         all_players = lobby_repo.get_lobby_users_no_host(lobby_name)
         for user in all_players:
             user_repo.set_user_in_quarantine_false(user["name"])
-        
+
+    @db_session
+    def delete_all_doors(self, lobby_name: str):
+        lobby_repo = LobbyRepository()
+        position_repo = PositionRepository()
+        all_players = lobby_repo.get_lobby_users_no_host(lobby_name)
+        for user in all_players:
+            pos_user = position_repo.get_position_user_name(user["name"])
+            position_repo.set_left_door(pos_user, False)
+            position_repo.set_right_door(pos_user, False)

@@ -96,8 +96,7 @@ No_gracias = {
 Fallaste = {
     "card_name" : "Fallaste",
     "card_type" : "Defensa",
-    "quantity_numb_players" : [0, 0, 0, 0, 0, 0, 0, 0, 0]
-    #"quantity_numb_players" : [1, 1, 2, 2, 2, 2, 2, 3, 3]
+    "quantity_numb_players" : [10, 10, 20, 20, 20, 20, 20, 30, 30] #la posta es sin el 0
 }
 
 Nada_de_barbacoas = {
@@ -140,7 +139,7 @@ Tres_cuatro = {
     "quantity_numb_players" : [1, 1, 1, 1, 1, 2, 2, 2, 2]
 }
 
-Es_aqui_la_fiesta = {
+Es_aqui_la_fiesta = { #! Skip
     "card_name" : "Es aqui la fiesta",
     "card_type" : "Panico",
     "quantity_numb_players" : [0, 1, 1, 1, 1, 2, 2, 2, 2]
@@ -158,7 +157,7 @@ Olvidadizo = {
     "quantity_numb_players" : [1, 1, 1, 1, 1, 1, 1, 1, 1]
 }
 
-Vuelta_y_vuelta = {
+Vuelta_y_vuelta = { #! Skip asegurado
     "card_name" : "Vuelta y vuelta",
     "card_type" : "Panico",
     "quantity_numb_players" : [1, 1, 1, 1, 1, 2, 2, 2, 2]
@@ -170,7 +169,7 @@ No_podemos_ser_amigos = {
     "quantity_numb_players" : [0, 0, 0, 1, 1, 2, 2, 2, 2]
 }
 
-Cita_a_ciegas = {
+Cita_a_ciegas = { 
     "card_name" : "Cita a ciegas",
     "card_type" : "Panico",
     "quantity_numb_players" : [1, 1, 1, 1, 1, 2, 2, 2, 2]
@@ -188,7 +187,7 @@ Que_quede_entre_nosotros = {
     "quantity_numb_players" : [0, 0, 0, 1, 1, 2, 2, 2, 2]
 }
 
-Revelaciones = {
+Revelaciones = { #! Skip
     "card_name" : "Revelaciones",
     "card_type" : "Panico",
     "quantity_numb_players" : [0, 0, 0, 0, 1, 1, 1, 1, 1]
