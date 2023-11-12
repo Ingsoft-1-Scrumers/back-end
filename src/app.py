@@ -36,8 +36,8 @@ async def exchange_stage(lobby_name : str, user_start : str, user_finish : str, 
 
     if (obstacle and not out_of_order): # Hay obstaculo
         await end_turn(lobby_name)
-    elif (user_repo.is_user_in_quarantine(user_finish)): # Si el objetivo esta en cuarentena
-        await end_turn(lobby_name)
+    #elif (user_repo.is_user_in_quarantine(user_finish)): # Si el objetivo esta en cuarentena
+    #    await end_turn(lobby_name)
     elif (superinfection): # Hay superinfeccion
         if (game_logic.superinfection(user_start)):
             game_logic.play_card(lobby_name, user_finish, user_start, "Lanzallamas")
