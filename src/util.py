@@ -562,8 +562,11 @@ class GameLogic:
                 target_users.append(previous_user_name)
                 
             #por el momento para que la otras cartas de pánico se jueguen, sin efecto
-            case "Determinacion" | "Revelaciones" | "Vuelta y vuelta" | "Olvidadizo" | "Es aqui la fiesta" | "Tres, cuatro" | "Uno, dos" | "Cuerdas podridas":
+            case "Determinacion" | "Revelaciones" | "Vuelta y vuelta" | "Olvidadizo" | "Es aqui la fiesta" | "Tres, cuatro" | "Cuerdas podridas":
                 target_users.append(user_name)
+
+            case "Uno, dos":
+                pass
 
         return target_users
         
@@ -714,3 +717,8 @@ class GameLogic:
             pos_user = position_repo.get_position_user_name(user["name"])
             position_repo.set_left_door(pos_user, False)
             position_repo.set_right_door(pos_user, False)
+    
+    '''
+    @db_session
+    def swap_position_party(self, lobby_name: str):
+    '''

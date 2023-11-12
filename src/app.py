@@ -248,6 +248,13 @@ async def game_flow(lobby_name : str):
                     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
                     await exchange_stage(lobby_name, user_turn, user_finish)
 
+                case 'Es aqui la fiesta':
+                    game_logic.delete_all_doors(lobby_name)
+                    game_logic.delete_all_quarantine(lobby_name)
+                    #game_logic.swap_position_party(lobby_name)
+
+                    pass
+
                 case _: #por el momento, para q se usen las otras cartas de pánico
                     user_finish = game_logic.next_player(lobby_name, user_turn)
                     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
