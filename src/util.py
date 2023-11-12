@@ -95,8 +95,13 @@ def puerta_atrancada(game_name: str, user_name: str, target_user_name: str):
     user_pos = position_repo.get_position_user_name(user_name)
     target_pos = position_repo.get_position_user_name(target_user_name)
 
-    if ((pos_user == 1 and pos_target == amount_players) or
-        pos_user > pos_target):
+    if ((pos_user == 1 and pos_target == amount_players)):
+        position_repo.set_right_door(target_pos, True)
+        position_repo.set_left_door(user_pos, True)
+    elif(pos_user == amount_players and pos_target == 1):
+        position_repo.set_right_door(user_pos, True)
+        position_repo.set_left_door(target_pos, True)
+    elif(pos_user > pos_target):
         position_repo.set_right_door(target_pos, True)
         position_repo.set_left_door(user_pos, True)
     else:
