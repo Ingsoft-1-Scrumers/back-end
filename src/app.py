@@ -21,11 +21,9 @@ app.add_middleware(
 '''
 Debuggear implementacion con el Front
 Hacer Testing
-En caso de que el Front este bien de tiempo, hacer mas cartas de panico
-Hacer deployment para que se pueda probar
-Hacer clang formating al codigo
-Cartas de panico jodidas: Es aqui la fiesta, Revelaciones y Vuelta Vuelta quedan para el final 
+Cartas de panico jodidas: Revelaciones y Olvidadizo queda para el final 
 Mejorar tema de la Victoria
+Hacer clang formating al codigo
 '''
 
 async def exchange_stage(lobby_name : str, user_start : str, user_finish : str, out_of_order : bool = False):
@@ -37,8 +35,8 @@ async def exchange_stage(lobby_name : str, user_start : str, user_finish : str, 
 
     if (obstacle and not out_of_order): # Hay obstaculo
         await end_turn(lobby_name)
-    #elif (user_repo.is_user_in_quarantine(user_finish)): # Si el objetivo esta en cuarentena
-    #    await end_turn(lobby_name)
+    elif (user_repo.is_user_in_quarantine(user_finish)): # Si el objetivo esta en cuarentena
+        await end_turn(lobby_name)
     elif (superinfection): # Hay superinfeccion
         if (game_logic.superinfection(user_start)):
             game_logic.play_card(lobby_name, user_finish, user_start, "Lanzallamas")
@@ -256,7 +254,7 @@ async def game_flow(lobby_name : str):
 
                     pass
 
-                case _: #por el momento, para q se usen las otras cartas de pánico
+                case _:
                     user_finish = game_logic.next_player(lobby_name, user_turn)
                     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
                     await exchange_stage(lobby_name, user_turn, user_finish)
@@ -495,7 +493,7 @@ async def create_lobby(lobby: CreateLobbyBase):
         total_users = lobby_repo.get_amount_users(lobby_name)
         is_private = lobby_repo.is_lobby_private(lobby_name)
 
-        if ENVIRONMENT == 'production':
+        if ENVIRONMENT != 'testing':
             await manager.add_user_to_lobby(lobby_name, host_name)
             await manager.broadcast_to_users_with_no_lobby(f"new_lobby, {lobby_name}, {total_users}, {max_players}, {is_private}")
         return {'message': 'Lobby created'}
@@ -553,7 +551,7 @@ async def join_lobby(request: JoinLobbyBase):
     try:
         lobby_repo.add_user_to_lobby(lobby_name, user_name)
         total_users = lobby_repo.get_amount_users(lobby_name)
-        if ENVIRONMENT == 'production':
+        if ENVIRONMENT != 'testing':
             await manager.broadcast_to_lobby_users(lobby_name, f"user_connect, {user_name}")
             await manager.add_user_to_lobby(lobby_name, user_name)
             await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
@@ -637,7 +635,7 @@ async def start_game(request: LobbyBase):
     try:
         game_logic.start_game(lobby_name)
 
-        if ENVIRONMENT == 'production':
+        if ENVIRONMENT != 'testing':
             await manager.broadcast_to_lobby_users(lobby_name, f"game_start")
             await manager.broadcast_to_users_with_no_lobby(f"game_start, {lobby_name}")
             await game_flow(lobby_name)
@@ -664,7 +662,7 @@ async def ready(request: LobbyBase):
 
     try:
         user_repo.set_user_ready(user_name, True)
-        if ENVIRONMENT == 'production':
+        if ENVIRONMENT != 'testing':
             await game_flow(lobby_name)
     except Exception as e:
         print(e)
@@ -782,7 +780,7 @@ async def steal_card(request: LobbyBase):
         else:   
             card_dict = game_logic.steal_card_from_deck_no_panic(user_name)
         
-        if ENVIRONMENT == 'production':
+        if ENVIRONMENT != 'testing':
             if (user_repo.is_user_in_quarantine(user_name)):
                 await manager.broadcast_to_lobby_users(lobby_name, f"steal_card, {user_name}, {card_dict['name']}")
             else:
@@ -825,7 +823,7 @@ async def discard_card(request: CardBase):
     try:
         game_logic.discard_card(user_name, id_card)
 
-        if ENVIRONMENT == 'production':
+        if ENVIRONMENT != 'testing':
             if (user_repo.is_user_in_quarantine(user_name)):
                 card_dict = card_repo.get_card_dict(id_card)
                 await manager.broadcast_to_lobby_users(lobby_name, f"discard_card, {user_name}, {card_dict['name']}")
@@ -1016,7 +1014,7 @@ async def swap_card(request: PlayCardBase):
             user_finish = game_repo.get_exchange_user_finish(lobby_name)
             card_start = game_repo.get_exchange_card_user_start(lobby_name)
             
-            if ENVIRONMENT == 'production':
+            if ENVIRONMENT != 'testing':
                 if (user_repo.is_user_in_quarantine(user_start)): # Usuario que inicio el intercambio esta en cuarentena
                     card_dict = card_repo.get_card_dict(card_start)
                     await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_start}, {user_finish}, {card_dict['name']}")
