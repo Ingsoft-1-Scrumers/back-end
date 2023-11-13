@@ -43,7 +43,7 @@ async def exchange_stage(lobby_name : str, user_start : str, user_finish : str, 
             team_winners = game_logic.team_winners(lobby_name)
             list_winners = game_logic.list_winners(lobby_name)
             await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
-            await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {'- '.join(list_winners)}")
+            await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {' - '.join(list_winners)}")
             await manager.remove_all_user_from_lobby(lobby_name)
             game_logic.end_game(lobby_name)
         else:
@@ -112,7 +112,7 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
         team_winners = game_logic.team_winners(lobby_name)
         list_winners = game_logic.list_winners(lobby_name)
         await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
-        await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {'- '.join(list_winners)}")
+        await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {' - '.join(list_winners)}")
         await manager.remove_all_user_from_lobby(lobby_name)
         game_logic.end_game(lobby_name)
     else:
@@ -187,7 +187,7 @@ async def game_flow(lobby_name : str):
                         list_winners = game_logic.list_winners(lobby_name)
                         await manager.broadcast_to_lobby_users(lobby_name, f"cosa_con_lanzallamas, {user_turn}")
                         await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
-                        await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {'- '.join(list_winners)}")
+                        await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {' - '.join(list_winners)}")
                         await manager.remove_all_user_from_lobby(lobby_name)
                         game_logic.end_game(lobby_name)
                     else:
@@ -206,7 +206,7 @@ async def game_flow(lobby_name : str):
                         list_winners = game_logic.list_winners(lobby_name)
                         await manager.broadcast_to_lobby_users(lobby_name, f"cosa_con_lanzallamas, {user_turn}")
                         await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
-                        await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {'- '.join(list_winners)}")
+                        await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {' - '.join(list_winners)}")
                         await manager.remove_all_user_from_lobby(lobby_name)
                         game_logic.end_game(lobby_name)
                     else:
@@ -390,7 +390,7 @@ async def game_flow(lobby_name : str):
                 team_winners = game_logic.team_winners(lobby_name)
                 list_winners = game_logic.list_winners(lobby_name)
                 await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
-                await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {'- '.join(list_winners)}")
+                await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {' - '.join(list_winners)}")
                 await manager.remove_all_user_from_lobby(lobby_name)
                 game_logic.end_game(lobby_name)
             else:
