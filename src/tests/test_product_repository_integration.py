@@ -176,6 +176,12 @@ def test_create_game(game_repository: GameRepository):
         assert count(Game.select()) == N_game + 1, "An additional game should have been created"
         
 @pytest.mark.integration_test
+def test_is_game_started(lobby_repository: LobbyRepository):
+     
+     with db_session:
+          assert lobby_repository.is_game_started("ABCD_lobby") == True, "The game was created correctly"
+
+@pytest.mark.integration_test
 def test_get_game(game_repository: GameRepository):
         
         with db_session:

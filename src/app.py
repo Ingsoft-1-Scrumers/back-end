@@ -4,6 +4,7 @@ from connection import ConnectionManager
 from repository import *
 from util import *
 from basemodels import *
+from settings import *
 
 app = FastAPI()
 manager = ConnectionManager()
@@ -493,8 +494,10 @@ async def create_lobby(lobby: CreateLobbyBase):
         lobby_repo.create_lobby(lobby_name, min_players, max_players, password, host_name)
         total_users = lobby_repo.get_amount_users(lobby_name)
         is_private = lobby_repo.is_lobby_private(lobby_name)
-        await manager.add_user_to_lobby(lobby_name, host_name)
-        await manager.broadcast_to_users_with_no_lobby(f"new_lobby, {lobby_name}, {total_users}, {max_players}, {is_private}")
+
+        if ENVIRONMENT == 'production':
+            await manager.add_user_to_lobby(lobby_name, host_name)
+            await manager.broadcast_to_users_with_no_lobby(f"new_lobby, {lobby_name}, {total_users}, {max_players}, {is_private}")
         return {'message': 'Lobby created'}
     except Exception as e:
         print(e)
@@ -550,9 +553,10 @@ async def join_lobby(request: JoinLobbyBase):
     try:
         lobby_repo.add_user_to_lobby(lobby_name, user_name)
         total_users = lobby_repo.get_amount_users(lobby_name)
-        await manager.broadcast_to_lobby_users(lobby_name, f"user_connect, {user_name}")
-        await manager.add_user_to_lobby(lobby_name, user_name)
-        await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
+        if ENVIRONMENT == 'production':
+            await manager.broadcast_to_lobby_users(lobby_name, f"user_connect, {user_name}")
+            await manager.add_user_to_lobby(lobby_name, user_name)
+            await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
         return {'message': 'Joined lobby'}
     except Exception as e:
         print(e)
@@ -632,9 +636,12 @@ async def start_game(request: LobbyBase):
 
     try:
         game_logic.start_game(lobby_name)
-        await manager.broadcast_to_lobby_users(lobby_name, f"game_start")
-        await manager.broadcast_to_users_with_no_lobby(f"game_start, {lobby_name}")
-        await game_flow(lobby_name)
+
+        if ENVIRONMENT == 'production':
+            await manager.broadcast_to_lobby_users(lobby_name, f"game_start")
+            await manager.broadcast_to_users_with_no_lobby(f"game_start, {lobby_name}")
+            await game_flow(lobby_name)
+
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while starting the game')
@@ -657,7 +664,8 @@ async def ready(request: LobbyBase):
 
     try:
         user_repo.set_user_ready(user_name, True)
-        await game_flow(lobby_name)
+        if ENVIRONMENT == 'production':
+            await game_flow(lobby_name)
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while setting the user as ready')
@@ -707,7 +715,7 @@ async def get_user_hand(lobby_name: str, user_name: str):
 async def get_play_combinations(lobby_name: str, user_name: str):
     user_repo = UserRepository()
     lobby_repo = LobbyRepository()
-    game_logic = GameLogic()  
+    game_logic = GameLogic()
     
     if not (lobby_repo.lobby_exists(lobby_name)):
         raise HTTPException(status_code=404, detail='This lobby name does not exist')
@@ -774,12 +782,13 @@ async def steal_card(request: LobbyBase):
         else:   
             card_dict = game_logic.steal_card_from_deck_no_panic(user_name)
         
-        if (user_repo.is_user_in_quarantine(user_name)):
-            await manager.broadcast_to_lobby_users(lobby_name, f"steal_card, {user_name}, {card_dict['name']}")
-        else:
-            await manager.broadcast_to_lobby_users(lobby_name, f"steal_card, {user_name}")
+        if ENVIRONMENT == 'production':
+            if (user_repo.is_user_in_quarantine(user_name)):
+                await manager.broadcast_to_lobby_users(lobby_name, f"steal_card, {user_name}, {card_dict['name']}")
+            else:
+                await manager.broadcast_to_lobby_users(lobby_name, f"steal_card, {user_name}")
 
-        await game_flow(lobby_name)
+            await game_flow(lobby_name)
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while stealing a card')
@@ -816,14 +825,16 @@ async def discard_card(request: CardBase):
     try:
         game_logic.discard_card(user_name, id_card)
 
-        if (user_repo.is_user_in_quarantine(user_name)):
-            card_dict = card_repo.get_card_dict(id_card)
-            await manager.broadcast_to_lobby_users(lobby_name, f"discard_card, {user_name}, {card_dict['name']}")
-        else:
-            await manager.broadcast_to_lobby_users(lobby_name, f"discard_card, {user_name}")
+        if ENVIRONMENT == 'production':
+            if (user_repo.is_user_in_quarantine(user_name)):
+                card_dict = card_repo.get_card_dict(id_card)
+                await manager.broadcast_to_lobby_users(lobby_name, f"discard_card, {user_name}, {card_dict['name']}")
+            else:
+                await manager.broadcast_to_lobby_users(lobby_name, f"discard_card, {user_name}")
 
-        game_repo.set_discard_or_play(lobby_name, "discard")
-        await game_flow(lobby_name)
+            game_repo.set_discard_or_play(lobby_name, "discard")
+            await game_flow(lobby_name)
+            
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while discarding the card')
@@ -935,6 +946,7 @@ async def defense_card(request: CardBase):
     game_logic = GameLogic()
     game_repo = GameRepository()
     card_repo = CardRepository()
+
     card_name = card_repo.get_card_name(card_id)
     
     if not (lobby_repo.lobby_exists(lobby_name)):
@@ -1004,13 +1016,18 @@ async def swap_card(request: PlayCardBase):
             user_finish = game_repo.get_exchange_user_finish(lobby_name)
             card_start = game_repo.get_exchange_card_user_start(lobby_name)
             
-            if (user_repo.is_user_in_quarantine(user_start)): # Usuario que inicio el intercambio esta en cuarentena
-                card_dict = card_repo.get_card_dict(card_start)
-                await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_start}, {user_finish}, {card_dict['name']}")
-            else: 
-                await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_start}, {user_finish}")
-            
-            await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_finish}, {user_start}")
+            if ENVIRONMENT == 'production':
+                if (user_repo.is_user_in_quarantine(user_start)): # Usuario que inicio el intercambio esta en cuarentena
+                    card_dict = card_repo.get_card_dict(card_start)
+                    await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_start}, {user_finish}, {card_dict['name']}")
+                else: 
+                    await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_start}, {user_finish}")
+                    
+                if (user_repo.is_user_in_quarantine(user_finish)): # Usuario que acepto el intercambio esta en cuarentena
+                    card_dict = card_repo.get_card_dict(card_finish)
+                    await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_finish}, {user_start}, {card_dict['name']}")
+                else:
+                    await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_finish}, {user_start}")
             
         await game_flow(lobby_name)  
     except Exception as e:
