@@ -20,7 +20,6 @@ app.add_middleware(
 #! Tareas por hacer en Back
 '''
 Debuggear implementacion con el Front
-Hacer Testing
 Cartas de panico jodidas: Revelaciones y Olvidadizo queda para el final 
 Mejorar tema de la Victoria
 Hacer clang formating al codigo
@@ -48,9 +47,10 @@ async def exchange_stage(lobby_name : str, user_start : str, user_finish : str, 
         victory = game_logic.victory(lobby_name) 
 
         if (victory):
+            team_winners = game_logic.team_winners(lobby_name)
             list_winners = game_logic.list_winners(lobby_name)
             await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
-            await manager.broadcast_to_lobby_users(lobby_name, f"winners, {list_winners}")
+            await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {list_winners}")
             await manager.remove_all_user_from_lobby(lobby_name)
             game_logic.end_game(lobby_name)
         else:
@@ -119,9 +119,10 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
     victory = game_logic.victory(lobby_name)
     
     if (victory):
+        team_winners = game_logic.team_winners(lobby_name)
         list_winners = game_logic.list_winners(lobby_name)
         await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
-        await manager.broadcast_to_lobby_users(lobby_name, f"winners, {list_winners}")
+        await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {list_winners}")
         await manager.remove_all_user_from_lobby(lobby_name)
         game_logic.end_game(lobby_name)
     else:
@@ -192,10 +193,11 @@ async def game_flow(lobby_name : str):
                     
                     if (lose_condition):
                         game_logic.play_card(lobby_name, user_turn, user_turn, "Lanzallamas")
+                        team_winners = game_logic.team_winners(lobby_name)
                         list_winners = game_logic.list_winners(lobby_name)
                         await manager.broadcast_to_lobby_users(lobby_name, f"cosa_con_lanzallamas, {user_turn}")
                         await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
-                        await manager.broadcast_to_lobby_users(lobby_name, f"winners, {list_winners}")
+                        await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {list_winners}")
                         await manager.remove_all_user_from_lobby(lobby_name)
                         game_logic.end_game(lobby_name)
                     else:
@@ -210,10 +212,11 @@ async def game_flow(lobby_name : str):
 
                     if (lose_condition):
                         game_logic.play_card(lobby_name, user_turn, user_turn, "Lanzallamas")
+                        team_winners = game_logic.team_winners(lobby_name)
                         list_winners = game_logic.list_winners(lobby_name)
                         await manager.broadcast_to_lobby_users(lobby_name, f"cosa_con_lanzallamas, {user_turn}")
                         await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
-                        await manager.broadcast_to_lobby_users(lobby_name, f"winners, {list_winners}")
+                        await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {list_winners}")
                         await manager.remove_all_user_from_lobby(lobby_name)
                         game_logic.end_game(lobby_name)
                     else:
@@ -226,35 +229,49 @@ async def game_flow(lobby_name : str):
                     await exchange_stage(lobby_name, user_turn, user_finish)
                 
                 case 'No podemos ser amigos':
+                    if (target_user_name == user_turn):
+                        user_finish = game_logic.next_player(lobby_name, user_turn)
+                    else:
+                        user_finish = target_user_name
                     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
                     await exchange_stage(lobby_name, user_turn, target_user_name, True)
 
                 case 'Sal de aqui':
-                    game_logic.play_card(lobby_name, user_turn, target_user_name, "Mas vale que corras")
-                    user_finish = game_logic.next_player(lobby_name, user_turn)
+                    if (target_user_name == user_turn):
+                        user_finish = game_logic.next_player(lobby_name, user_turn)
+                    else:
+                        game_logic.play_card(lobby_name, user_turn, target_user_name, "Mas vale que corras")
+                        user_finish = game_logic.next_player(lobby_name, user_turn)
                     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
                     await exchange_stage(lobby_name, user_turn, user_finish)
 
-                case 'Uno, dos': #! Falta hacer bien su target
-                    pass
+                case 'Uno, dos':
+                    if (target_user_name == user_turn):
+                        user_finish = game_logic.next_player(lobby_name, user_turn)
+                    else:
+                        game_logic.play_card(lobby_name, user_turn, target_user_name, "Mas vale que corras")
+                        user_finish = game_logic.next_player(lobby_name, user_turn)
+                    await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+                    await exchange_stage(lobby_name, user_turn, user_finish)
                 
-                case 'Olvidadizo':
-                    pass
+                case 'Olvidadizo': #! Incompleto
+                    user_finish = game_logic.next_player(lobby_name, user_turn)
+                    await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
+                    await exchange_stage(lobby_name, user_turn, user_finish)
                     
                 case 'Tres, cuatro':
                     game_logic.delete_all_doors(lobby_name)
                     user_finish = game_logic.next_player(lobby_name, user_turn)
-                    await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
+                    await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
                     await exchange_stage(lobby_name, user_turn, user_finish)
 
-                case 'Es aqui la fiesta':
+                case 'Es aqui la fiesta': #! Incompleto
                     game_logic.delete_all_doors(lobby_name)
                     game_logic.delete_all_quarantine(lobby_name)
                     game_logic.swap_position_party(lobby_name)
-
                     pass
 
-                case _:
+                case _: #! Acan caen Revelaciones y Vuelta y Vuelta
                     user_finish = game_logic.next_player(lobby_name, user_turn)
                     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
                     await exchange_stage(lobby_name, user_turn, user_finish)
@@ -382,9 +399,10 @@ async def game_flow(lobby_name : str):
             victory = game_logic.victory(lobby_name)
 
             if (victory):
+                team_winners = game_logic.team_winners(lobby_name)
                 list_winners = game_logic.list_winners(lobby_name)
                 await manager.broadcast_to_lobby_users(lobby_name, f"game_over")
-                await manager.broadcast_to_lobby_users(lobby_name, f"winners, {list_winners}")
+                await manager.broadcast_to_lobby_users(lobby_name, f"winners, {team_winners}, {list_winners}")
                 await manager.remove_all_user_from_lobby(lobby_name)
                 game_logic.end_game(lobby_name)
             else:

@@ -531,16 +531,22 @@ class GameLogic:
                 if(not self.user_repo.is_user_in_quarantine(user_name)):
                     for user in all_players:
                         #no puede con los que están en cuarentena
-                        if(not self.user_repo.is_user_in_quarantine((user["name"]))):
+                        if(not self.user_repo.is_user_in_quarantine((user["name"])) and (user["name"] != user_name)):
                             target_users.append(user["name"])
-                    target_users.remove(user_name)
 
-            case "Seduccion" | "No podemos ser amigos" | "Sal de aqui": # Todos menos el que la juega
+            case "Seduccion": # Todos menos el que la juega
                 for user in all_players:
                     #no puede con los que están en cuarentena
-                    if(not self.user_repo.is_user_in_quarantine((user["name"]))):
+                    if(not self.user_repo.is_user_in_quarantine((user["name"])) and (user["name"] != user_name)):
                         target_users.append(user["name"])
-                target_users.remove(user_name)
+
+            case "No podemos ser amigos" | "Sal de aqui": # Todos menos el que la juega
+                for user in all_players:
+                    #no puede con los que están en cuarentena
+                    if(not self.user_repo.is_user_in_quarantine((user["name"])) and (user["name"] != user_name)):
+                        target_users.append(user["name"])
+                if (len(target_users) == 0):
+                    target_users.append(user_name)
 
             case "Whisky" | "Vigila tus espaldas" | "¡Ups!" | "Cita a ciegas":  # El que juega o el flujo de juego
                 target_users.append(user_name)
@@ -573,7 +579,6 @@ class GameLogic:
                 target_users.append(next_user_name)
                 target_users.append(previous_user_name)
                 
-            #por el momento para que la otras cartas de pánico se jueguen, sin efecto
             case "Determinacion" | "Revelaciones" | "Vuelta y vuelta" | "Olvidadizo" | "Es aqui la fiesta" | "Tres, cuatro" | "Cuerdas podridas":
                 target_users.append(user_name)
 
@@ -584,6 +589,8 @@ class GameLogic:
                     target_users.append(next_next_user_name)
                 if (previous_previous_user_name != user_name):
                     target_users.append(previous_previous_user_name)
+                if (len(target_users) == 0):
+                    target_users.append(user_name)
 
         return target_users
         
@@ -703,11 +710,27 @@ class GameLogic:
         return self.humans_win(lobby_name) or self.cosa_win(lobby_name)
 
     @db_session
-    def list_winners(self, lobby_name: str) -> str:
+    def team_winners(self, lobby_name: str) -> str:
         if (self.humans_win(lobby_name)):
             winners = "los humanos"
         else:
             winners = "la Cosa y los infectados"
+        return winners
+    
+    @db_session
+    def list_winners(self, lobby_name: str) -> [str]:
+        humans = []
+        cosa_and_infected = []
+        users = self.lobby_repo.get_lobby_set_users(lobby_name)
+        for user in users:
+            if (user.role == "Humano"):
+                humans.append(user.name)
+            else:
+                cosa_and_infected.append(user.name)
+        if (self.humans_win(lobby_name)):
+            winners = humans
+        else:
+            winners = cosa_and_infected
         return winners
     
     @db_session
@@ -735,11 +758,17 @@ class GameLogic:
             position_repo.set_left_door(pos_user, False)
             position_repo.set_right_door(pos_user, False)
     
-    
+    '''
     @db_session
     def swap_position_party(self, lobby_name: str):
         lobby_repo = LobbyRepository()
         position_repo = PositionRepository()
+
         all_players = lobby_repo.get_lobby_users_no_host(lobby_name)
-        for user in all_players:
-            pass
+        length_players = len(all_players)
+        even_players = ((length_players % 2) == 0) 
+
+        for pair in (all_players//2):
+            first_user_of_pair = all_players[]
+            game_logic.swap_positions(user_name, target_user_name)
+    '''
