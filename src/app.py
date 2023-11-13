@@ -103,7 +103,7 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
             await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
             user_finish = game_logic.next_player(lobby_name, user_turn)
 
-        case _:
+        case 'Determinacion': #! No hace nada
             game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
             await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
             user_finish = game_logic.next_player(lobby_name, user_turn)
@@ -252,11 +252,6 @@ async def game_flow(lobby_name : str):
                         user_finish = game_logic.next_player(lobby_name, user_turn)
                     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
                     await exchange_stage(lobby_name, user_turn, user_finish)
-                
-                case 'Olvidadizo': #! Incompleto
-                    user_finish = game_logic.next_player(lobby_name, user_turn)
-                    await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
-                    await exchange_stage(lobby_name, user_turn, user_finish)
                     
                 case 'Tres, cuatro':
                     game_logic.delete_all_doors(lobby_name)
@@ -273,7 +268,7 @@ async def game_flow(lobby_name : str):
                     await exchange_stage(lobby_name, user_turn, user_finish)
                     pass
 
-                case _: #! Acan caen Revelaciones y Vuelta y Vuelta
+                case _: #! Acan caen Olvidadizo, Revelaciones y Vuelta y Vuelta
                     user_finish = game_logic.next_player(lobby_name, user_turn)
                     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
                     await exchange_stage(lobby_name, user_turn, user_finish)

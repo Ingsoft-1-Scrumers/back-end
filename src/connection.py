@@ -1,5 +1,4 @@
 from fastapi import WebSocket
-import time
 
 class ConnectionManager:
     def __init__(self):
@@ -83,7 +82,6 @@ class ConnectionManager:
         for user_name in self.users_in_lobby[lobby_name]:
             await self.send_message(user_name, message)
         
-        time.sleep(1/1000)
 
     async def remove_all_user_from_lobby(self, lobby_name: str):
         if lobby_name not in self.users_in_lobby.keys():

@@ -756,13 +756,12 @@ class GameLogic:
             position_repo.set_left_door(pos_user, False)
             position_repo.set_right_door(pos_user, False)
     
-    
     @db_session
     def swap_position_party(self, lobby_name: str):
         lobby_repo = LobbyRepository()
         all_players = lobby_repo.get_lobby_users_no_host(lobby_name)
         length_players = len(all_players)
-        for pair in (length_players//2):
-            first_user_of_pair = all_players[pair]["name"]
-            second_user_of_pair = all_players[pair+1]["name"]
+        for pair in range(0, (length_players//2)):
+            first_user_of_pair = all_players[2*pair]["name"]
+            second_user_of_pair = all_players[2*pair + 1]["name"]
             self.swap_positions(first_user_of_pair, second_user_of_pair)
