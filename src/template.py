@@ -139,7 +139,7 @@ Tres_cuatro = {
     "quantity_numb_players" : [1, 1, 1, 1, 1, 2, 2, 2, 2]
 }
 
-Es_aqui_la_fiesta = { #! Skip
+Es_aqui_la_fiesta = {
     "card_name" : "Es aqui la fiesta",
     "card_type" : "Panico",
     "quantity_numb_players" : [10, 10, 10, 10, 10, 20, 20, 20, 20] 
@@ -157,7 +157,7 @@ Olvidadizo = {
     "quantity_numb_players" : [1, 1, 1, 1, 1, 1, 1, 1, 1]
 }
 
-Vuelta_y_vuelta = { #! Skip asegurado
+Vuelta_y_vuelta = {
     "card_name" : "Vuelta y vuelta",
     "card_type" : "Panico",
     "quantity_numb_players" : [1, 1, 1, 1, 1, 2, 2, 2, 2]
@@ -187,7 +187,7 @@ Que_quede_entre_nosotros = {
     "quantity_numb_players" : [0, 0, 0, 1, 1, 2, 2, 2, 2]
 }
 
-Revelaciones = { #! Skip
+Revelaciones = {
     "card_name" : "Revelaciones",
     "card_type" : "Panico",
     "quantity_numb_players" : [0, 0, 0, 0, 1, 1, 1, 1, 1]

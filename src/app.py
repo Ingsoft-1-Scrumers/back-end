@@ -20,7 +20,6 @@ app.add_middleware(
 #! Tareas por hacer en Back
 '''
 Debuggear implementacion con el Front
-Cartas de panico jodidas: Revelaciones y Olvidadizo queda para el final 
 Hacer clang formating al codigo
 '''
 
@@ -75,14 +74,12 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
             out_of_order = True
             await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
         
-        # Mensaje con id de la carta aleatoria que mira
         case 'Sospecha':
             random_card = user_repo.get_random_card_from_hand(target_user_name)
             card_name = card_repo.get_card_name(random_card)
             await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
             await manager.send_message(user_turn, f"sospecha, {target_user_name}, {card_name}")
 
-        # Mensaje con una LISTA de ids de cartas de su mano que le muestra al resto de jugadores
         case 'Whisky':
             user_cards = user_repo.get_user_cards(user_turn)
             await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
@@ -90,7 +87,6 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
             lose_condition = game_logic.flamethrower_lose_condition(user_turn)
             user_cosa = user_turn 
 
-        # Mensaje con una LISTA de ids de cartas del objetivo
         case 'Analisis':
             user_cards = user_repo.get_user_cards(target_user_name)
             await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
@@ -103,7 +99,7 @@ async def applied_effect(lobby_name : str, target_user_name : str, effect_to_be_
             await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
             user_finish = game_logic.next_player(lobby_name, user_turn)
 
-        case 'Determinacion': #! No hace nada
+        case 'Determinacion': #! No hace nada 
             game_logic.play_card(lobby_name, user_turn, target_user_name, effect_to_be_applied)
             await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
             user_finish = game_logic.next_player(lobby_name, user_turn)
@@ -425,7 +421,6 @@ async def lobby_listing(websocket: WebSocket, user_name: str):
                 raise HTTPException(status_code=401, detail='This user is not in a lobby')
             
     except WebSocketDisconnect:
-
         is_in_lobby = user_repo.is_user_in_a_lobby(user_name)
 
         if (not is_in_lobby):
@@ -683,17 +678,13 @@ async def ready(request: LobbyBase):
         print(e)
         raise HTTPException(status_code=500, detail='An error occurred while setting the user as ready')
 
-@app.get('/users_position/{lobby_name}') #! Cambiar a futuro, en sprint 3
-async def get_users_position(lobby_name: str, user_name: str):
+@app.get('/users_position/{lobby_name}')
+async def get_users_position(lobby_name: str):
     lobby_repo = LobbyRepository()
-    user_repo = UserRepository()
     game_repo = GameRepository()
     
     if not (lobby_repo.lobby_exists(lobby_name)):
         raise HTTPException(status_code=404, detail='This lobby name does not exist')
-    
-    if not (user_repo.is_user_in_lobby(lobby_name, user_name)):
-        raise HTTPException(status_code=401, detail='This user is not in the lobby')
     
     if not (lobby_repo.is_game_started(lobby_name)):
         raise HTTPException(status_code=406, detail='This game has not started yet')
