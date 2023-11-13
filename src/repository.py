@@ -158,7 +158,12 @@ class UserRepository:
         return (user.quarantine > 0)
 
     @db_session
-    def set_user_in_quarantine_true(self, user_name: str):
+    def set_user_in_quarantine_next_player(self, user_name: str):
+        user = self.get_user(user_name)
+        user.quarantine = 3
+
+    @db_session
+    def set_user_in_quarantine_previous_player(self, user_name: str):
         user = self.get_user(user_name)
         user.quarantine = 2
 
@@ -455,7 +460,10 @@ class GameRepository:
     @db_session
     def get_users_position(self, game_name: str) -> [dict]:
         positions = self.get_all_positions(game_name)
-        users_dict = [{'name': position.user.name, 'position': position.number} for position in positions]
+        users_dict = [{'name': position.user.name, 
+                       'position': position.number, 
+                       'left_door': position.left_door,
+                       'quarantine': position.user.quarantine} for position in positions]
         users_dict = sorted(users_dict, key=lambda x: x.get('position', ''))
         return users_dict
     
@@ -581,6 +589,16 @@ class GameRepository:
     def get_defend_or_exchange(self, game_name: str) -> str:
         game = self.get_game(game_name)
         return game.defend_or_exchange
+
+    @db_session
+    def set_is_panic_card(self, game_name: str, boolean: bool):
+        game = self.get_game(game_name)
+        game.is_panic_card = boolean
+
+    @db_session
+    def get_is_panic_card(self, game_name: str) -> bool:
+        game = self.get_game(game_name)
+        return game.is_panic_card
     
 class CardRepository:
 
@@ -609,6 +627,11 @@ class CardRepository:
     def get_card_name(self, card_id: int) -> str:
         card = self.get_card(card_id)
         return card.name
+    
+    @db_session
+    def is_panic_card(self, card_id: int) -> bool:
+        card = self.get_card(card_id)
+        return card.type == "Panico"
 
 class PositionRepository:
 

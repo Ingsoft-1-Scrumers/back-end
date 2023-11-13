@@ -15,19 +15,22 @@ def lanzallamas(game_name: str, user_name: str, target_user_name: str):
     lobby_repo = LobbyRepository()
     game_logic = GameLogic()
     position_repo = PositionRepository()
-
+    
     pos_target = position_repo.get_position_user_name(target_user_name)
-    previus_player_name = game_logic.previous_player(game_name, target_user_name)
-    next_player_name = game_logic.next_player(game_name, target_user_name)
-    pos_previus_player = position_repo.get_position_user_name(previus_player_name)
-    pos_next_player = position_repo.get_position_user_name(next_player_name)
+    
+    # 1 (2) | 3 4 5 -> 1 | 3 4 5 -> el 3 sigue con la puerta a izq, falta puerta der en 1
     if (position_repo.get_right_door(pos_target)):
+        left_player_of_target_name = game_logic.closest_anticlockwise_player(game_name, target_user_name)
+        left_player_of_target_pos = position_repo.get_position(left_player_of_target_name)
         position_repo.set_right_door(pos_target, False)
-        position_repo.set_right_door(pos_previus_player, True)
-    #import ipdb; ipdb.set_trace()
+        position_repo.set_right_door(left_player_of_target_pos, True)
+        
+    # 1 2 | (3) 4 5 -> 1 2 | 4 5 -> el 2 sigue con la puerta a der, falta puerta izq en 4
     if (position_repo.get_left_door(pos_target)):
+        right_player_of_target_name = game_logic.closest_clockwise_player(game_name, target_user_name)
+        right_player_of_target_pos = position_repo.get_position(right_player_of_target_name)
         position_repo.set_left_door(pos_target, False)
-        position_repo.set_left_door(pos_next_player, True)
+        position_repo.set_left_door(right_player_of_target_pos, True)
 
     target_user = user_repo.get_user(target_user_name)
     # Si se quiere eliminar al host, se cambia el mismo
@@ -54,6 +57,7 @@ def hacha(game_name: str, user_name: str, target_user_name: str):
     if(user_name == target_user_name):
         user_repo.set_user_in_quarantine_false(target_user_name)
     else:
+        #sacamos la puerta atrancada entre el user y el target
         if(game_logic.is_there_obstacle_between_players(game_name, user_name, target_user_name)):
             pos_user_numb = position_repo.get_numb_position(user_name)
             pos_target_numb = position_repo.get_numb_position(target_user_name)
@@ -68,6 +72,9 @@ def hacha(game_name: str, user_name: str, target_user_name: str):
             else:
                 position_repo.set_left_door(pos_target, False)
                 position_repo.set_right_door(pos_user, False)
+        #sacamos la cuarentena del adyacente
+        elif(user_repo.is_user_in_quarantine(target_user_name)):
+            user_repo.set_user_in_quarantine_false(target_user_name)
 
 @db_session
 def determinacion(game_name: str, user_name: str, target_user_name: str):
@@ -75,8 +82,15 @@ def determinacion(game_name: str, user_name: str, target_user_name: str):
 
 @db_session
 def cuarentena(game_name: str, user_name: str, target_user_name: str):
+    position_repo = PositionRepository()
     user_repo = UserRepository()
-    user_repo.set_user_in_quarantine_true(target_user_name) 
+    pos_user = position_repo.get_numb_position(user_name)
+    pos_target = position_repo.get_numb_position(target_user_name)
+
+    if (pos_user < pos_target):
+        user_repo.set_user_in_quarantine_next_player(target_user_name) 
+    else:
+        user_repo.set_user_in_quarantine_previous_player(target_user_name)
 
 @db_session
 def puerta_atrancada(game_name: str, user_name: str, target_user_name: str):
@@ -88,8 +102,13 @@ def puerta_atrancada(game_name: str, user_name: str, target_user_name: str):
     user_pos = position_repo.get_position_user_name(user_name)
     target_pos = position_repo.get_position_user_name(target_user_name)
 
-    if ((pos_user == 1 and pos_target == amount_players) or
-        pos_user > pos_target):
+    if ((pos_user == 1 and pos_target == amount_players)):
+        position_repo.set_right_door(target_pos, True)
+        position_repo.set_left_door(user_pos, True)
+    elif(pos_user == amount_players and pos_target == 1):
+        position_repo.set_right_door(user_pos, True)
+        position_repo.set_left_door(target_pos, True)
+    elif(pos_user > pos_target):
         position_repo.set_right_door(target_pos, True)
         position_repo.set_left_door(user_pos, True)
     else:
@@ -355,6 +374,8 @@ class GameLogic:
             num_infect = len(user.hand.select(lambda card : card.name == "Infectado"))
             if (user.role == "Infectado" and num_infect == 1):
                 valid_result = False
+        elif(card_to_discard.type == "Panico"):
+            valid_result = False
        
         return valid_result
 
@@ -365,12 +386,41 @@ class GameLogic:
         self.lobby_repo.remove_lobby(lobby_name)
 
     @db_session
+    def update_doors_after_swap_position(self, user_name1, user_name2):
+        position_repo = PositionRepository()
+        pos_user_1 = position_repo.get_position_user_name(user_name1)
+        pos_user_2 = position_repo.get_position_user_name(user_name2)
+        
+        right_door_1 = position_repo.get_right_door(pos_user_1)
+        right_door_2 = position_repo.get_right_door(pos_user_2)
+        left_door_1 = position_repo.get_left_door(pos_user_1)
+        left_door_2 = position_repo.get_left_door(pos_user_2)
+        
+        # 1 2 | 3 4 5 -> swap 2 y 5 -> 1 5 | 3 4 2
+        if (right_door_1):
+            position_repo.set_right_door(pos_user_1, False)
+            position_repo.set_right_door(pos_user_2, True)
+        if (right_door_2):
+            position_repo.set_right_door(pos_user_2, False)
+            position_repo.set_right_door(pos_user_1, True)
+            
+        # 1 2 | 3 4 5 -> swap 3 y 5 -> 1 2 | 5 4 3
+        if (left_door_1):
+            position_repo.set_left_door(pos_user_1, False)
+            position_repo.set_left_door(pos_user_2, True)
+        if (left_door_2):
+            position_repo.set_left_door(pos_user_2, False)
+            position_repo.set_left_door(pos_user_1, True)
+
+    @db_session
     def swap_positions(self, user_name1: str, user_name2: str):
         pos_user1 = self.user_repo.get_position(user_name1)
         pos_user2 = self.user_repo.get_position(user_name2)
         
         aux1 = self.position_repo.get_number(pos_user1)
         aux2 = self.position_repo.get_number(pos_user2)
+        
+        self.update_doors_after_swap_position(user_name1, user_name2)
 
         self.position_repo.set_position(pos_user1, aux2)
         self.position_repo.set_position(pos_user2, aux1)
@@ -396,7 +446,7 @@ class GameLogic:
         return exchange_with_superinfection
     
     @db_session
-    def left_player(self, game_name: str, user_name: str) -> str:
+    def closest_clockwise_player(self, game_name: str, user_name: str) -> str:
         initial_amount_players = self.game_repo.get_initial_amount(game_name)
         user_position = self.position_repo.get_position(user_name)
         user_number = self.position_repo.get_number(user_position)
@@ -411,7 +461,7 @@ class GameLogic:
         return left_position.user.name
 
     @db_session
-    def right_player(self, game_name: str, user_name: str) -> str:
+    def closest_anticlockwise_player(self, game_name: str, user_name: str) -> str:
         initial_amount_players = self.game_repo.get_initial_amount(game_name)
         user_position = self.position_repo.get_position(user_name)
         user_number = self.position_repo.get_number(user_position)
@@ -436,10 +486,10 @@ class GameLogic:
     def previous_player(self, game_name :str, user_name :str) -> str:
         direction = self.game_repo.get_direction(game_name)
 
-        if (direction): # Izquierda
-            previous_player = self.right_player(game_name, user_name)
-        else: # Derecha
-            previous_player = self.left_player(game_name, user_name)
+        if (direction): #sentido horario, el previous es la izquierda
+            previous_player = self.closest_anticlockwise_player(game_name, user_name) 
+        else: #sentido antihorario, el previous es la derecha
+            previous_player = self.closest_clockwise_player(game_name, user_name)
             
         return previous_player
     
@@ -447,10 +497,10 @@ class GameLogic:
     def next_player(self, game_name :str, user_name :str) -> str:
         direction = self.game_repo.get_direction(game_name)
 
-        if (direction): # Izquierda
-            next_player = self.left_player(game_name, user_name)
-        else: # Derecha
-            next_player = self.right_player(game_name, user_name)
+        if (direction): #sentido horario, el next es la derecha
+            next_player = self.closest_clockwise_player(game_name, user_name)
+        else: #sentido antihorario, el next es la izquierda
+            next_player = self.closest_anticlockwise_player(game_name, user_name)
         
         return next_player
 
@@ -466,43 +516,75 @@ class GameLogic:
             case "Hacha":   
                 if(self.user_repo.is_user_in_quarantine(user_name)):    #si estoy en cuarentena, puedo jugar esta carta sobre mi mismo
                     target_users.append(user_name)
-                #si hay puerta atrancada entre yo y un jugador adyacente, juego esa carta sobre el jugador para sacar la puerta
-                if(self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)):
-                    target_users.append(next_user_name)
-                if(self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)):
-                    target_users.append(previous_user_name)
                     
-            case "Determinacion": #no tiene efecto en esta sprint, pero pongo un user para q sea jugable
-                target_users.append(user_name)
+                #si hay puerta atrancada entre yo y un jugador adyacente, juego esa carta sobre el jugador para sacar la puerta
+                #si mis adyacentes están en cuarentena, puedo jugarles esta carta
+                if(self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)
+                   or self.user_repo.is_user_in_quarantine(next_user_name)):
+                    target_users.append(next_user_name)
+                if(self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)
+                   or self.user_repo.is_user_in_quarantine(previous_user_name)):
+                    target_users.append(previous_user_name)
 
-            case "Mas vale que corras": #no puede con los que están en cuarentena
+            case "Mas vale que corras": 
+                #no puede jugar la carta si estoy en cuarentena
+                if(not self.user_repo.is_user_in_quarantine(user_name)):
+                    for user in all_players:
+                        #no puede con los que están en cuarentena
+                        if(not self.user_repo.is_user_in_quarantine((user["name"]))):
+                            target_users.append(user["name"])
+                    target_users.remove(user_name)
+
+            case "Seduccion" | "No podemos ser amigos" | "Sal de aqui": # Todos menos el que la juega
                 for user in all_players:
+                    #no puede con los que están en cuarentena
                     if(not self.user_repo.is_user_in_quarantine((user["name"]))):
                         target_users.append(user["name"])
                 target_users.remove(user_name)
 
-            case "Seduccion": # Todos menos el que la juega
-                for user in all_players:
-                    target_users.append(user["name"])
-                target_users.remove(user_name)
-
-            case "Whisky" | "Vigila tus espaldas":  # El que juega o el flujo de juego
+            case "Whisky" | "Vigila tus espaldas" | "¡Ups!" | "Cita a ciegas":  # El que juega o el flujo de juego
                 target_users.append(user_name)
+            
+            case "Lanzallamas":
+                #no puedo jugar si estoy en cuarentena
+                if(not self.user_repo.is_user_in_quarantine(user_name)):
+                    if(not self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)):
+                        target_users.append(next_user_name)
+                    if(not self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)):
+                        target_users.append(previous_user_name)
 
-            case "Lanzallamas" | "Analisis" | "Sospecha" | "Cuarentena" | "Puerta trancada": # Usuarios adyacentes
+            case "Analisis" | "Sospecha" | "Cuarentena" | "Puerta trancada": # Usuarios adyacentes
                 if(not self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)):
                     target_users.append(next_user_name)
                 if(not self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)):
                     target_users.append(previous_user_name)
                     
             case "Cambio de lugar":
-                if(not (self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)
-                   or self.user_repo.is_user_in_quarantine(next_user_name))):
-                    target_users.append(next_user_name)
-                if(not (self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)
-                        or self.user_repo.is_user_in_quarantine(previous_user_name))):
-                    target_users.append(previous_user_name)
+                #no puedo jugar esta carta si estoy en cuarentena
+                if(not self.user_repo.is_user_in_quarantine(user_name)):
+                    if(not (self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)
+                    or self.user_repo.is_user_in_quarantine(next_user_name))):
+                        target_users.append(next_user_name)
+                    if(not (self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)
+                            or self.user_repo.is_user_in_quarantine(previous_user_name))):
+                        target_users.append(previous_user_name)
             
+            case "Que quede entre nosotros":
+                target_users.append(next_user_name)
+                target_users.append(previous_user_name)
+                
+            #por el momento para que la otras cartas de pánico se jueguen, sin efecto
+            case "Determinacion" | "Revelaciones" | "Vuelta y vuelta" | "Olvidadizo" | "Es aqui la fiesta" | "Tres, cuatro" | "Cuerdas podridas":
+                target_users.append(user_name)
+
+            case "Uno, dos":
+                previous_previous_user_name = self.previous_player(lobby_name, previous_user_name)
+                next_next_user_name = self.next_player(lobby_name, next_user_name)
+                if (next_next_user_name != user_name):
+                    target_users.append(next_next_user_name)
+                if (previous_previous_user_name != user_name):
+                    target_users.append(previous_previous_user_name)
+
         return target_users
         
     @db_session
@@ -558,7 +640,7 @@ class GameLogic:
         cancel = False
         match card_effect:
             case "Seduccion" | "swap_card":
-                cancel = (card_name == "Aterrador") or (card_name == "No_gracias")
+                cancel = (card_name == "Aterrador") or (card_name == "No_gracias") or (card_name == "Fallaste")
             case "Cambio de lugar" | "Mas vale que corras":
                 cancel = (card_name == "Aqui estoy bien")
             case "Lanzallamas":
@@ -575,6 +657,7 @@ class GameLogic:
             result = self.position_repo.get_left_door(pos_user)
         return result
 
+    #supone que son adyacentes.
     @db_session
     def is_there_obstacle_between_players(self, lobby_name: str, user_name: str, target_user_name: str) -> bool:
         pos_user_numb = self.position_repo.get_numb_position(user_name)
@@ -626,3 +709,37 @@ class GameLogic:
         else:
             winners = "la Cosa y los infectados"
         return winners
+    
+    @db_session
+    def flamethrower_lose_condition(self, user_name : str) -> bool:
+        user_repo = UserRepository()
+        
+        death_condition = user_repo.get_role(user_name) == "Cosa" and self.is_card_in_hand(user_name, "Lanzallamas")
+        return death_condition
+    
+    @db_session
+    def delete_all_quarantine(self, lobby_name: str):
+        user_repo = UserRepository()
+        lobby_repo = LobbyRepository()
+        all_players = lobby_repo.get_lobby_users_no_host(lobby_name)
+        for user in all_players:
+            user_repo.set_user_in_quarantine_false(user["name"])
+
+    @db_session
+    def delete_all_doors(self, lobby_name: str):
+        lobby_repo = LobbyRepository()
+        position_repo = PositionRepository()
+        all_players = lobby_repo.get_lobby_users_no_host(lobby_name)
+        for user in all_players:
+            pos_user = position_repo.get_position_user_name(user["name"])
+            position_repo.set_left_door(pos_user, False)
+            position_repo.set_right_door(pos_user, False)
+    
+    
+    @db_session
+    def swap_position_party(self, lobby_name: str):
+        lobby_repo = LobbyRepository()
+        position_repo = PositionRepository()
+        all_players = lobby_repo.get_lobby_users_no_host(lobby_name)
+        for user in all_players:
+            pass
