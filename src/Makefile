@@ -1,14 +1,14 @@
 # Makefile for deleting SQLite database, __pycache__, .pytest_cache, and running uvicorn
 
 # Variables
-DB_NAME = database_test.sqlite
+DB_NAME = database
 
 # Targets and Rules
 .PHONY: clean_db clean_cache run_app run_unit_tests run_integration_tests
 
 clean_db:
 	@echo "Deleting SQLite database..."
-	@rm -f $(DB_NAME)
+	@rm -f $(DB_NAME)*
 
 clean_cache:
 	@echo "Deleting __pycache__ directories and .pytest_cache..."
