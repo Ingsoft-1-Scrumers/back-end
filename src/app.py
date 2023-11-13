@@ -1022,13 +1022,7 @@ async def swap_card(request: PlayCardBase):
                     await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_start}, {user_finish}, {card_dict['name']}")
                 else: 
                     await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_start}, {user_finish}")
-                    
-                if (user_repo.is_user_in_quarantine(user_finish)): # Usuario que acepto el intercambio esta en cuarentena
-                    card_dict = card_repo.get_card_dict(card_finish)
-                    await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_finish}, {user_start}, {card_dict['name']}")
-                else:
-                    await manager.broadcast_to_lobby_users(lobby_name, f"card_swap, {user_finish}, {user_start}")
-            
+                      
         await game_flow(lobby_name)  
     except Exception as e:
         print(e)
