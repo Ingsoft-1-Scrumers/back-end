@@ -30,8 +30,7 @@ run_integration_tests: clean_all
 	rm database_test.sqlite
 	unset ENVIRONMENT
 
-run_end2end_tests: clean_all
+run_end2end_tests:
 	ENVIRONMENT=test python tests/populate_test_db.py
 	pytest -m end2end_test -vv
-	rm database_test.sqlite
 	unset ENVIRONMENT

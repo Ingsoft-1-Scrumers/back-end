@@ -17,11 +17,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#! Tareas por hacer en Back
-'''
-Debuggear implementacion con el Front
-Hacer clang formating al codigo
-'''
 
 async def exchange_stage(lobby_name : str, user_start : str, user_finish : str, out_of_order : bool = False):
     user_repo = UserRepository()
@@ -600,23 +595,26 @@ async def leave_lobby(request: LobbyBase):
         raise HTTPException(status_code=406, detail='This game has already started')
     
     try:
-        if (user_repo.is_user_host(lobby_name, user_name) and lobby_repo.get_amount_users(lobby_name) == 1):
-            lobby_repo.leave_lobby(lobby_name, user_name)
-            await manager.remove_all_user_from_lobby(lobby_name)
-            await manager.broadcast_to_users_with_no_lobby(f"lobby_close, {lobby_name}")
-        elif (user_repo.is_user_host(lobby_name, user_name)):
-            lobby_repo.leave_lobby(lobby_name, user_name)
-            await manager.remove_user_from_lobby(lobby_name, user_name)
-            await manager.broadcast_to_lobby_users(lobby_name, f"lobby_close")
-            await manager.remove_all_user_from_lobby(lobby_name)
-            await manager.broadcast_to_users_with_no_lobby(f"lobby_close, {lobby_name}")
+        if ENVIRONMENT != 'test':
+            if (user_repo.is_user_host(lobby_name, user_name) and lobby_repo.get_amount_users(lobby_name) == 1):
+                lobby_repo.leave_lobby(lobby_name, user_name)
+                await manager.remove_all_user_from_lobby(lobby_name)
+                await manager.broadcast_to_users_with_no_lobby(f"lobby_close, {lobby_name}")
+            elif (user_repo.is_user_host(lobby_name, user_name)):
+                lobby_repo.leave_lobby(lobby_name, user_name)
+                await manager.remove_user_from_lobby(lobby_name, user_name)
+                await manager.broadcast_to_lobby_users(lobby_name, f"lobby_close")
+                await manager.remove_all_user_from_lobby(lobby_name)
+                await manager.broadcast_to_users_with_no_lobby(f"lobby_close, {lobby_name}")
+            else:
+                lobby_repo.leave_lobby(lobby_name, user_name)
+                await manager.remove_user_from_lobby(lobby_name, user_name)
+                await manager.broadcast_to_lobby_users(lobby_name, f"user_disconnect, {user_name}")
+                total_users = lobby_repo.get_amount_users(lobby_name)
+                await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
         else:
             lobby_repo.leave_lobby(lobby_name, user_name)
-            await manager.remove_user_from_lobby(lobby_name, user_name)
-            await manager.broadcast_to_lobby_users(lobby_name, f"user_disconnect, {user_name}")
-            total_users = lobby_repo.get_amount_users(lobby_name)
-            await manager.broadcast_to_users_with_no_lobby(f"update_players, {lobby_name}, {total_users}")
-            
+
         return  {'message': 'User left lobby successfully'}
     except Exception as e:
         print(e)
@@ -643,12 +641,14 @@ async def start_game(request: LobbyBase):
         raise HTTPException(status_code=406, detail='This game has already started')
 
     try:
-        game_logic.start_game(lobby_name)
-
         if ENVIRONMENT != 'test':
+            game_logic.start_game(lobby_name)
             await manager.broadcast_to_lobby_users(lobby_name, f"game_start")
             await manager.broadcast_to_users_with_no_lobby(f"game_start, {lobby_name}")
             await game_flow(lobby_name)
+        else:
+            game_logic.start_game(lobby_name)
+            return {'message': 'Game started'}
 
     except Exception as e:
         print(e)

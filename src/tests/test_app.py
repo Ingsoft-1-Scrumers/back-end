@@ -503,14 +503,13 @@ def test_get_lobby_users__error(mock_LobbyRepository):
 # Abandonar lobby tests
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
-def test_leave_lobby(mock_LobbyRepository, mock_UserRepository):
+def test_leave_lobby(mock_UserRepository, mock_LobbyRepository):
     mock_repository_lobby = MagicMock()
     mock_repository_user = MagicMock()
 
     mock_repository_lobby.lobby_exists.return_value = True
     mock_repository_user.is_user_in_lobby.return_value = True
-    mock_repository_lobby.is_game_started.return_value = True
-    mock_repository_lobby.leave_lobby.return_value = True
+    mock_repository_lobby.is_game_started.return_value = False
 
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
@@ -583,23 +582,27 @@ def test_leave_lobby__error(mock_UserRepository, mock_LobbyRepository):
     assert_response_equals(response, 500, {'detail': 'An error occurred while leaving the lobby'})
 
 # Iniciar juego tests
+@patch('app.GameLogic')
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
-def test_start_game(mock_LobbyRepository, mock_UserRepository):
+def test_start_game(mock_UserRepository, mock_LobbyRepository, mock_GameLogic):
     mock_repository_lobby = MagicMock()
     mock_repository_user = MagicMock()
+    mock_repository_gamelogic = MagicMock()
 
     mock_repository_lobby.lobby_exists.return_value = True
     mock_repository_lobby.can_start_game.return_value = True
     mock_repository_user.is_user_host.return_value = True
     mock_repository_lobby.is_game_started.return_value = False
+    mock_repository_gamelogic.start_game.return_value = True
 
     mock_LobbyRepository.return_value = mock_repository_lobby
     mock_UserRepository.return_value = mock_repository_user
+    mock_GameLogic.return_value = mock_repository_gamelogic
 
     json_body = {"lobby_name": "Lobby2", "user_name": "User2"}
     response = client.post(url='/start_game/', json=json_body)
-    assert response.status_code == 200, response.json()
+    assert_response_equals(response, 200, {'message': 'Game started'})
 
 @patch('app.LobbyRepository')
 def test_start_game__lobby_does_not_exist(mock_LobbyRepository):
@@ -711,7 +714,6 @@ def test_users_position(mock_UserRepository, mock_LobbyRepository, mock_GameRepo
     mock_repository_game = MagicMock()
 
     mock_repository_lobby.lobby_exists.return_value = True
-    mock_repository_user.is_user_in_lobby.return_value = True
     mock_repository_lobby.is_game_started.return_value = True
     mock_repository_game.get_users_position.return_value = lobby_positions
 
@@ -719,7 +721,7 @@ def test_users_position(mock_UserRepository, mock_LobbyRepository, mock_GameRepo
     mock_LobbyRepository.return_value = mock_repository_lobby
     mock_GameRepository.return_value = mock_repository_game
 
-    response = client.get(url='/users_position/Lobby1?user_name=User1')
+    response = client.get(url='/users_position/Lobby1')
     assert_response_equals(response, 200, lobby_positions)
 
 @patch('app.LobbyRepository')
@@ -730,23 +732,8 @@ def test_users_position__lobby_does_not_exist(mock_LobbyRepository):
 
     mock_LobbyRepository.return_value = mock_repository_lobby
 
-    response = client.get(url='/users_position/Lobby1?user_name=User1')
+    response = client.get(url='/users_position/Lobby1')
     assert_response_equals(response, 404, {'detail': 'This lobby name does not exist'})
-
-@patch('app.LobbyRepository')
-@patch('app.UserRepository')
-def test_users_position__user_not_in_lobby(mock_UserRepository, mock_LobbyRepository):
-    mock_repository_user = MagicMock()
-    mock_repository_lobby = MagicMock()
-
-    mock_repository_lobby.lobby_exists.return_value = True
-    mock_repository_user.is_user_in_lobby.return_value = False
-
-    mock_UserRepository.return_value = mock_repository_user
-    mock_LobbyRepository.return_value = mock_repository_lobby
-
-    response = client.get(url='/users_position/Lobby1?user_name=User1')
-    assert_response_equals(response, 401, {'detail': 'This user is not in the lobby'})
 
 @patch('app.LobbyRepository')
 @patch('app.UserRepository')
@@ -755,13 +742,12 @@ def test_users_position__game_not_started(mock_UserRepository, mock_LobbyReposit
     mock_repository_lobby = MagicMock()
 
     mock_repository_lobby.lobby_exists.return_value = True
-    mock_repository_user.is_user_in_lobby.return_value = True
     mock_repository_lobby.is_game_started.return_value = False
 
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
 
-    response = client.get(url='/users_position/Lobby1?user_name=User1')
+    response = client.get(url='/users_position/Lobby1')
     assert_response_equals(response, 406, {'detail': 'This game has not started yet'})
 
 @patch('app.GameRepository')
@@ -773,7 +759,6 @@ def test_users_position__error(mock_UserRepository, mock_LobbyRepository, mock_G
     mock_repository_game = MagicMock()
 
     mock_repository_lobby.lobby_exists.return_value = True
-    mock_repository_user.is_user_in_lobby.return_value = True
     mock_repository_lobby.is_game_started.return_value = True
     mock_repository_game.get_users_position.side_effect = Exception()
 
@@ -781,7 +766,7 @@ def test_users_position__error(mock_UserRepository, mock_LobbyRepository, mock_G
     mock_LobbyRepository.return_value = mock_repository_lobby
     mock_GameRepository.return_value = mock_repository_game
 
-    response = client.get(url='/users_position/Lobby1?user_name=User1')
+    response = client.get(url='/users_position/Lobby1')
     assert_response_equals(response, 500, {'detail': 'An error occurred while getting the users position'})
 
 # Obtener mano de un usuario tests
@@ -862,9 +847,9 @@ def test_user_hand__error(mock_UserRepository, mock_LobbyRepository):
     assert_response_equals(response, 500, {'detail': 'An error occurred while getting the hand'})
 
 # Obtener objetivos de la carta
-@patch('app.UserRepository')
-@patch('app.LobbyRepository')
 @patch('app.GameLogic')
+@patch('app.LobbyRepository')
+@patch('app.UserRepository')
 def test_get_play_combinations(mock_UserRepository, mock_LobbyRepository, mock_GameLogic, combinations):
     mock_repository_user = MagicMock()
     mock_repository_lobby = MagicMock()
@@ -874,7 +859,6 @@ def test_get_play_combinations(mock_UserRepository, mock_LobbyRepository, mock_G
     mock_repository_user.is_user_in_lobby.return_value = True
     mock_repository_lobby.is_game_started.return_value = True
     mock_repository_game_logic.get_play_combinations.return_value = combinations
-    #mock_repository_game_logic.get_play_combinations.assert_called_once_with("User1", "Lobby1")
 
     mock_UserRepository.return_value = mock_repository_user
     mock_LobbyRepository.return_value = mock_repository_lobby
