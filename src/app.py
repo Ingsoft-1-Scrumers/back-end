@@ -250,14 +250,13 @@ async def game_flow(lobby_name : str):
                     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
                     await exchange_stage(lobby_name, user_turn, user_finish)
 
-                case 'Es aqui la fiesta': #! Incompleto
+                case 'Es aqui la fiesta':
                     user_finish = game_logic.next_player(lobby_name, user_turn)
                     game_logic.delete_all_doors(lobby_name)
                     game_logic.delete_all_quarantine(lobby_name)
                     game_logic.swap_position_party(lobby_name)
                     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
                     await exchange_stage(lobby_name, user_turn, user_finish)
-                    pass
 
                 case _: #! Acan caen Olvidadizo, Revelaciones y Vuelta y Vuelta
                     user_finish = game_logic.next_player(lobby_name, user_turn)
