@@ -96,7 +96,7 @@ No_gracias = {
 Fallaste = {
     "card_name" : "Fallaste",
     "card_type" : "Defensa",
-    "quantity_numb_players" : [10, 10, 20, 20, 20, 20, 20, 30, 30] #la posta es sin el 0
+    "quantity_numb_players" : [0, 1, 2, 2, 2, 2, 2, 3, 3] #la posta es sin el 0
 }
 
 Nada_de_barbacoas = {
@@ -142,7 +142,7 @@ Tres_cuatro = {
 Es_aqui_la_fiesta = { #! Skip
     "card_name" : "Es aqui la fiesta",
     "card_type" : "Panico",
-    "quantity_numb_players" : [0, 1, 1, 1, 1, 2, 2, 2, 2]
+    "quantity_numb_players" : [10, 10, 10, 10, 10, 20, 20, 20, 20] 
 }
 
 Sal_de_aqui = {

@@ -249,5 +249,5 @@ def test_start_and_end_game(game_logic: GameLogic):
     with db_session:
         assert count(Game.select()) == N_game - 1, "The game should have been deleted"
         assert count(Lobby.select()) == N_lobby - 1, "The lobby should have been deleted"
-        assert count(Card.select()) == N_cards - 34, "The cards should have been deleted"
+        assert count(Card.select()) == N_cards - 54, "The cards should have been deleted"
         assert count(Position.select()) == N_positions - 4, "The positions should have been deleted"

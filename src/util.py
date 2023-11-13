@@ -567,12 +567,10 @@ class GameLogic:
                     
             case "Cambio de lugar":
                 #no puedo jugar esta carta si estoy en cuarentena
-                if(not self.user_repo.is_user_in_quarantine(user_name)):
-                    if(not (self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name)
-                    or self.user_repo.is_user_in_quarantine(next_user_name))):
+                if (not self.user_repo.is_user_in_quarantine(user_name)):
+                    if (not (self.is_there_obstacle_between_players(lobby_name, user_name, next_user_name) or self.user_repo.is_user_in_quarantine(next_user_name))):
                         target_users.append(next_user_name)
-                    if(not (self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name)
-                            or self.user_repo.is_user_in_quarantine(previous_user_name))):
+                    if (not (self.is_there_obstacle_between_players(lobby_name, user_name, previous_user_name) or self.user_repo.is_user_in_quarantine(previous_user_name))):
                         target_users.append(previous_user_name)
             
             case "Que quede entre nosotros":
@@ -758,17 +756,13 @@ class GameLogic:
             position_repo.set_left_door(pos_user, False)
             position_repo.set_right_door(pos_user, False)
     
-    '''
+    
     @db_session
     def swap_position_party(self, lobby_name: str):
         lobby_repo = LobbyRepository()
-        position_repo = PositionRepository()
-
         all_players = lobby_repo.get_lobby_users_no_host(lobby_name)
         length_players = len(all_players)
-        even_players = ((length_players % 2) == 0) 
-
-        for pair in (all_players//2):
-            first_user_of_pair = all_players[]
-            game_logic.swap_positions(user_name, target_user_name)
-    '''
+        for pair in (length_players//2):
+            first_user_of_pair = all_players[pair]["name"]
+            second_user_of_pair = all_players[pair+1]["name"]
+            self.swap_positions(first_user_of_pair, second_user_of_pair)

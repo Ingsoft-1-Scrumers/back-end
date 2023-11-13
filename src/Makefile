@@ -21,16 +21,16 @@ run_app: clean_db clean_cache
 	@echo "Running uvicorn..."
 	@uvicorn app:app --reload
 
-run_unit_tests:
+run_unit_tests: clean_all
 	pytest -m "not integration_test and not end2end_test"
 
-run_integration_tests:
+run_integration_tests: clean_all
 	ENVIRONMENT=test python tests/populate_test_db.py
 	pytest -m integration_test -vv
 	rm database_test.sqlite
 	unset ENVIRONMENT
 
-run_end2end_tests:
+run_end2end_tests: clean_all
 	ENVIRONMENT=test python tests/populate_test_db.py
 	pytest -m end2end_test -vv
 	rm database_test.sqlite
