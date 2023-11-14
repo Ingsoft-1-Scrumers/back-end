@@ -177,11 +177,12 @@ class UserRepository:
         user = self.get_user(user_name)
         user.role = "Infectado"
 
-    @db_session #! Que pasa con las puerta atrancada?
+    @db_session
     def user_death(self, user_name: str):
         position_repo = PositionRepository()
         user = self.get_user(user_name)
         user.lobby = None
+        user.quarantine = 0
         position_repo.remove_position(user)
     
     @db_session

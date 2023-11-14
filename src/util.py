@@ -381,6 +381,8 @@ class GameLogic:
 
     @db_session
     def end_game(self, lobby_name: str):
+        self.delete_all_doors(lobby_name)
+        self.delete_all_quarantine(lobby_name)
         self.game_repo.remove_game(lobby_name)
         self.lobby_repo.remove_all_users_from_lobby(lobby_name)
         self.lobby_repo.remove_lobby(lobby_name)
