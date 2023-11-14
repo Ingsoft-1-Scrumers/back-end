@@ -385,6 +385,10 @@ class LobbyRepository:
         lobby_users = self.get_lobby_set_users(lobby_name)
         for user in lobby_users:
             user.lobby = None
+            user.role = None
+            user.hand = None
+            user.hosting_lobby = None
+            user.ready = False
 
     @db_session
     def remove_lobby(self, lobby_name: str):
