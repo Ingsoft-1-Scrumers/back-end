@@ -197,7 +197,7 @@ async def game_flow(lobby_name : str):
                     user_cards = user_repo.get_user_cards(user_turn)
                     user_finish = game_logic.next_player(lobby_name, user_turn)
                     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {target_user_name}, {effect_to_be_applied}")
-                    await manager.send_message(user_turn, f"que quede entre nosotros, {target_user_name}, {user_cards}")
+                    await manager.send_message(target_user_name, f"que quede entre nosotros, {user_turn}, {user_cards}")
                     lose_condition = game_logic.flamethrower_lose_condition(user_turn) and (user_repo.get_role(target_user_name) == "Humano")
 
                     if (lose_condition):
