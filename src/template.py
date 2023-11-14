@@ -96,7 +96,8 @@ No_gracias = {
 Fallaste = {
     "card_name" : "Fallaste",
     "card_type" : "Defensa",
-    "quantity_numb_players" : [0, 1, 2, 2, 2, 2, 2, 3, 3] #la posta es sin el 0
+    "quantity_numb_players" : [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    #"quantity_numb_players" : [1, 1, 2, 2, 2, 2, 2, 3, 3]
 }
 
 Nada_de_barbacoas = {
@@ -110,7 +111,7 @@ Nada_de_barbacoas = {
 Cuarentena = {
     "card_name" : "Cuarentena",
     "card_type" : "Obstaculo",
-    "quantity_numb_players" : [10, 10, 10, 10, 10, 20, 20, 20, 20] #el primero 0
+    "quantity_numb_players" : [0, 1, 1, 1, 1, 2, 2, 2, 2]
 }
 
 Puerta_trancada = {
@@ -142,7 +143,7 @@ Tres_cuatro = {
 Es_aqui_la_fiesta = {
     "card_name" : "Es aqui la fiesta",
     "card_type" : "Panico",
-    "quantity_numb_players" : [10, 10, 10, 10, 10, 20, 20, 20, 20] 
+    "quantity_numb_players" : [0, 1, 1, 1, 1, 2, 2, 2, 2]
 }
 
 Sal_de_aqui = {
@@ -169,7 +170,7 @@ No_podemos_ser_amigos = {
     "quantity_numb_players" : [0, 0, 0, 1, 1, 2, 2, 2, 2]
 }
 
-Cita_a_ciegas = { 
+Cita_a_ciegas = {
     "card_name" : "Cita a ciegas",
     "card_type" : "Panico",
     "quantity_numb_players" : [1, 1, 1, 1, 1, 2, 2, 2, 2]
