@@ -19,6 +19,11 @@ class LobbyBase(BaseModel):
     lobby_name: str
     user_name: str
 
+class StealCard(BaseModel):
+    lobby_name: str
+    user_name: str
+    card_name: str
+
 class PlayCardBase(BaseModel):
     lobby_name: str
     user_name: str
@@ -29,6 +34,10 @@ class CardBase(BaseModel):
     lobby_name: str
     user_name: str
     card_id: int
+
+class CardBaseName(BaseModel):
+    lobby_name: str
+    card_name: str
 
 class ChoiceBase(BaseModel):
     lobby_name: str

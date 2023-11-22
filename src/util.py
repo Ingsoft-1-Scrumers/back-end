@@ -178,6 +178,18 @@ class GameLogic:
         self.remove_card_from_deck(the_thing_card)
 
     @db_session
+    def steal_this_card(self, user_name: str, game_name: str, card_name : str) -> dict:
+        user = self.user_repo.get_user(user_name)
+        game = self.lobby_repo.get_game(game_name)
+        this_card = game.deck_cards.select(lambda card: card.name == card_name).first()
+        this_card.user_hand = user
+        self.remove_card_from_deck(this_card)
+        card_dict = {'id': this_card.id,
+                     'name': this_card.name, 
+                     'type': this_card.type}
+        return card_dict 
+
+    @db_session
     def deal_cards_all_users(self, users : Set(User), game : Game):
         self.assign_the_thing(users, game)
         for user in users:
@@ -550,7 +562,7 @@ class GameLogic:
                 if (len(target_users) == 0):
                     target_users.append(user_name)
 
-            case "Whisky" | "Vigila tus espaldas" | "¡Ups!" | "Cita a ciegas":  # El que juega o el flujo de juego
+            case "Whisky" | "Vigila tus espaldas" | "Ups" | "Cita a ciegas":  # El que juega o el flujo de juego
                 target_users.append(user_name)
             
             case "Lanzallamas":

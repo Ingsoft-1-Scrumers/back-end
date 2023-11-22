@@ -174,11 +174,11 @@ async def game_flow(lobby_name : str):
                     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
                     await manager.send_message(user_turn, f"steal_after_panic")
 
-                case '¡Ups!':
+                case 'Ups':
                     user_cards = user_repo.get_user_cards(user_turn)
                     user_finish = game_logic.next_player(lobby_name, user_turn)
                     await manager.broadcast_to_lobby_users(lobby_name, f"play_card, {user_turn}, {user_turn}, {effect_to_be_applied}")
-                    await manager.broadcast_to_lobby_users(lobby_name, f"¡ups!, {user_turn}, {user_cards}")
+                    await manager.broadcast_to_lobby_users(lobby_name, f"ups, {user_turn}, {user_cards}")
                     lose_condition = game_logic.flamethrower_lose_condition(user_turn)
                     
                     if (lose_condition):
@@ -760,9 +760,10 @@ async def get_user_role(lobby_name: str, user_name: str):
         raise HTTPException(status_code=500, detail='An internal error occurred')
 
 @app.post('/steal_card/')
-async def steal_card(request: LobbyBase):
+async def steal_card(request: StealCard):
     lobby_name = request.lobby_name
     user_name = request.user_name
+    card_name = request.card_name
     lobby_repo = LobbyRepository()
     user_repo = UserRepository()
     game_repo = GameRepository()
@@ -779,11 +780,19 @@ async def steal_card(request: LobbyBase):
     
     try:
         if (game_repo.get_game_status(lobby_name) == 'steal_card_stage'):
-            card_dict = game_logic.steal_card_from_deck(user_name)
+            if(card_name == "None"):
+                card_dict = game_logic.steal_card_from_deck(user_name)
+            else:
+                card_dict = game_logic.steal_this_card(user_name, lobby_name, card_name)
+
             if (card_dict["type"] == "Panico"):
                 game_repo.set_effect_to_be_applied(lobby_name, "Panico")
-        else:   
-            card_dict = game_logic.steal_card_from_deck_no_panic(user_name)
+        else:
+            if(card_name == "None"):
+                card_dict = game_logic.steal_card_from_deck_no_panic(user_name)
+            else:
+                card_dict = game_logic.steal_this_card(user_name, lobby_name, card_name)
+
         
         if ENVIRONMENT != 'test':
             if (user_repo.is_user_in_quarantine(user_name)):
