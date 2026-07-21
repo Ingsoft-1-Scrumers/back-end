@@ -1,4 +1,17 @@
-# Back-end
+# La Cosa, Back-end
+
+Back-end de una versión online del juego de mesa La Cosa (The Thing), desarrollado como proyecto grupal de Ingeniería de Software (tercer año) en FaMAF, Universidad Nacional de Córdoba, siguiendo una metodología Scrum. Construido con FastAPI (Python).
+
+## El juego
+
+La Cosa es un juego de mesa de roles ocultos y deducción social. Este repositorio implementa la lógica del juego y la API que consume el front-end. Las reglas del juego original están [disponibles acá](https://genxgames.es/wp-content/uploads/the-thing-reglas.pdf).
+
+## Tecnologías
+
+- FastAPI
+- Python 3.10
+- WebSockets
+- MySQL
 
 ## Instalación
 
@@ -12,10 +25,11 @@ $ python3.10 --version
 Python 3.10.12
 ```
 
+FastAPI genera la documentación interactiva de la API sola, disponible en `/docs` (Swagger UI) una vez que la API está corriendo.
+
 ## Crear entorno virtual
 
-Vamos a crear un entorno virtual para instalar las dependencias de nuestro proyecto. En el directorio `home` ejecutamos:
-El nombre del entorno virtual es `venv`, se ejecuta una sola vez y cada vez que queremos trabajar en el proyecto ejecutamos `source venv/bin/activate` para activar el entorno virtual.
+Vamos a crear un entorno virtual para instalar las dependencias de nuestro proyecto. En el directorio `home` ejecutamos el nombre del entorno virtual`venv` y cada vez que queremos trabajar en el proyecto ejecutamos `source venv/bin/activate` para activar el entorno virtual.
 
 ```bash
 $ python3 -m venv venv
@@ -49,6 +63,11 @@ Se les proporciona un Makefile con el que pueden correr la aplicacion. Correr el
 ```bash
 (venv) $ make run_app
 ```
+
+## Repositorios del proyecto
+
+- Back-end (este repositorio)
+- [Front-end](https://github.com/Ingsoft-1-Scrumers/front-end) (React + Vite)
 
 ## Pagina para probar nuestra API
 
