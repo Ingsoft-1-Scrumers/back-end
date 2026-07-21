@@ -68,7 +68,3 @@ Se les proporciona un Makefile con el que pueden correr la aplicacion. Correr el
 
 - Back-end (este repositorio)
 - [Front-end](https://github.com/Ingsoft-1-Scrumers/front-end) (React + Vite)
-
-## Pagina para probar nuestra API
-
-Esta [pagina web](https://reqbin.com/) que te permite hacer requests HTTP a la API. Se necesita tener Chrome + esta [Extensión](https://chrome.google.com/webstore/detail/reqbin-http-client/gmmkjpcadciiokjpikmkkmapphbmdjok) instalada para poder usarla.
