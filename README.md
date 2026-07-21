@@ -29,7 +29,7 @@ FastAPI genera la documentación interactiva de la API sola, disponible en `/doc
 
 ## Crear entorno virtual
 
-Vamos a crear un entorno virtual para instalar las dependencias de nuestro proyecto. En el directorio `home` ejecutamos el nombre del entorno virtual`venv` y cada vez que queremos trabajar en el proyecto ejecutamos `source venv/bin/activate` para activar el entorno virtual.
+Vamos a crear un entorno virtual para instalar las dependencias de nuestro proyecto. En el directorio `home` ejecutamos el nombre del entorno virtual `venv` y cada vez que queremos trabajar en el proyecto ejecutamos `source venv/bin/activate` para activar el entorno virtual.
 
 ```bash
 $ python3 -m venv venv
